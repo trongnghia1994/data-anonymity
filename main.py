@@ -15,7 +15,7 @@ QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
 MIN_SUP = 0.0045
 MIN_CONF = 0.2
 MIN_LENGTH = 2
-DESIRED_K = 1
+DESIRED_K = 2
 
 '''
     Notions
@@ -95,8 +95,9 @@ def group_risk(a_group):
 
 
 def rule_budget(a_rule):
-    '''Budget of the rule A -> B where A, B are sets of attribute values. The smaller the budget the more risk it will be lost'''
+    '''Budget of the rule A -> B where A, B are sets of attribute values. The smaller the budget the more risk it will be lost'''    
     if not item_set_contains_quasi_attr(a_rule.B):
+        # If the right hand side of the rule does not contain any quasi attribute
         return min(a_rule.support - MIN_SUP, a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence*(1 - MIN_CONF))
     else:
         return min(a_rule.support - MIN_SUP, a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence)
@@ -263,15 +264,35 @@ def apply_policies(R_care, group_i, group_j, migration_direction='l2r'):
     return ableToMigrate, group_i, group_j, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed
 
 
+def group_first_tuple(a_group: GROUP):
+    if len(a_group.origin_tuples) > 0:
+        return a_group.origin_tuples[0]
+
+    if len(a_group.received_tuples) > 0:
+        return a_group.origin_tuples[0]
+
+    return None
+
+
+def convert_quasi_attributes(data_tuple: DATA_TUPLE, dst_data_tuple: DATA_TUPLE):
+    '''Convert all quasi attributes' values of <data_tuple> 
+    to the corresponding of <dst_data_tuple>'''
+    data_tuple.data.update(dst_data_tuple.data[:6])
+
+
 def do_migration(group_i: GROUP, group_j: GROUP, migrant_tuples_indices: list):
     '''Migrate tuples from group i to group j. Migrant tuples' indices figured out in migrant indices'''
     kept_tuples_indices = list(set(range(len(group_i.origin_tuples))) - set(migrant_tuples_indices)) 
-    for i in migrant_tuples_indices:   # Move tuples to another group
-        group_j.received_tuples.append(group_i.origin_tuples[i])
-        tuples_to_move = [group_i.origin_tuples[migrant_i] for migrant_i in migrant_tuples_indices]
-    group_i.origin_tuples = [group_i.origin_tuples[kept_i] for kept_i in kept_tuples_indices]
-    group_j.received_tuples.extend(tuples_to_move)
+    dst_group_first_tuple = group_first_tuple(group_j)
+    # Move tuples to another group
+    for i in migrant_tuples_indices:
+        tuple_to_move = group_i.origin_tuples[i]
+        convert_quasi_attributes(tuple_to_move, dst_group_first_tuple)
+        group_j.received_tuples.append(tuple_to_move)
 
+    # Group i now only has some tuples kept
+    group_i.origin_tuples = [group_i.origin_tuples[kept_i] for kept_i in kept_tuples_indices]
+    
 
 # Apply policies to perform a useful migration operation
 def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: list):
@@ -336,15 +357,22 @@ def m3ar_algo(D, R_initial):
             print('LOOP ITERATION {}: MIGRATION FROM GROUP {} TO GROUP {}'.format(loop_iteration, result_find_migration.group_i.index, result_find_migration.group_j.index))
             g = result_find_migration.group_i if result_find_migration.group_i.index != SelG.index else result_find_migration.group_j
             # Perform a migration operation
-            print('DO MIGRATION')
             do_migration(result_find_migration.group_i, result_find_migration.group_j, result_find_migration.migrant_tuples_indices)
 
             # Then remove the other group from UG if it is in
             if g in UG:
                 UG.remove(g)
-                print('REMOVE complete')       
 
-            # Handle SelG next?
+            # Check if now we have a safe group in the pair (SelG, g) or not
+            if is_safe_group(SelG):
+                if SelG not in SG:
+                    SG.append(SelG)
+
+            if is_safe_group(g):
+                if g not in SG:
+                    SG.append(g)
+
+            # Handle which group next?
             if is_unsafe_group(SelG):
                 pass    # Keep handling SelG
             elif is_unsafe_group(g):    # Continue with g
