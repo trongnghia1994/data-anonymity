@@ -107,6 +107,7 @@ def generate_counts_C1(dict_table):
     return temp_C
 
 def apriori(dict_table,support):
+    print(dict_table)
     L=[]
     C=[]
     min_sup_count = len(dict_table)*support
@@ -145,7 +146,7 @@ def apriori(dict_table,support):
 
 if __name__=='__main__':
     support = 0.23
-    L,C = apriori(dict_table,support=support)
+    L, C = apriori(dict_table,support=support)
     number_of_frequent_itemsets = sum(len(x) for x in L)
     print(" ")
     print("Number of frequent itemsets:")
