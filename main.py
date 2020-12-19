@@ -98,9 +98,9 @@ def rule_budget(a_rule):
     '''Budget of the rule A -> B where A, B are sets of attribute values. The smaller the budget the more risk it will be lost'''    
     if not item_set_contains_quasi_attr(a_rule.B):
         # If the right hand side of the rule does not contain any quasi attribute
-        return min(a_rule.support - MIN_SUP, a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence*(1 - MIN_CONF))
+        return min(a_rule.support - MIN_SUP, int(a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence*(1 - MIN_CONF)))
     else:
-        return min(a_rule.support - MIN_SUP, a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence)
+        return min(a_rule.support - MIN_SUP, int(a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence))
 
 
 def is_safe_group(a_group: GROUP):
@@ -218,6 +218,12 @@ def migration_check_budget_all_rules_affected_positive(R_care, T):
     return all(rule.budget > 0 for rule in R_affected)
 
 
+def budgets_of_rules_affected_by_migrating_a_tuple(R_care, t: DATA_TUPLE):
+    '''Calculate budgets of rules affected by migrating a data tuple to another group'''
+    R_affected = construct_r_affected_by_a_migration(R_care, [t])
+    return [rule.budget for rule in R_affected]
+
+
 '''
 3. Calculate number of migrant tuples in a migration operation
 '''
@@ -265,6 +271,7 @@ def apply_policies(R_care, group_i, group_j, migration_direction='l2r'):
 
 
 def group_first_tuple(a_group: GROUP):
+    '''Return the first tuple of group from origin_tuples or received_tuples'''
     if len(a_group.origin_tuples) > 0:
         return a_group.origin_tuples[0]
 
@@ -299,13 +306,14 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
     remaining_groups = UG + SG
     results = []
     for group in remaining_groups:
-        # Start to apply policies
-        factors = apply_policies(R_care, selected_group, group, 'l2r')
-        factors_reverse = apply_policies(R_care, group, selected_group, 'r2l')
-        if factors[0]:
-            results.append(factors)
-        if factors_reverse[0]:
-            results.append(factors_reverse)
+        if group.group_index != selected_group.group_index:
+            # Start to apply policies
+            factors = apply_policies(R_care, selected_group, group, 'l2r')
+            factors_reverse = apply_policies(R_care, group, selected_group, 'r2l')
+            if factors[0]:
+                results.append(factors)
+            if factors_reverse[0]:
+                results.append(factors_reverse)
 
     if len(results) == 0:
         return None
@@ -316,14 +324,35 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
     resultsDataFrame.sort_values(by=['time_elapsed', 'risk_reduction', 'no_migrant_tuples'], ascending=[True, False, True])
     return resultsDataFrame.iloc[0]
 
-def disperse(a_group):
+
+GROUPS, SG, UG, UM = [], [], [], []
+
+def find_group(group_index):
+    for group in GROUPS:
+        if group.group_index == group_index:
+            return group
+
+    return None
+
+
+def disperse(a_group: GROUP):
     '''
     This group is still unsafe and it contains tuples migrated from other groups
     In loop we cannot find another group to perform migration with this group
     Disperse, return or move (Giai tan) tuples that have been migrated into this group to other ones
     '''
-    pass
+    # For all receiving tuples, return them to the source group
+    for data_tuple in a_group.received_tuples:
+        source_group = find_group(data_tuple.group_index)
+        print('Source group', source_group)
+        source_group.origin_tuples.append(data_tuple)
+        # If the source group now has only 1 tuple, add it to UM to be processed
+        if group_length(source_group) == 1 and source_group not in UM:
+            UM.append(source_group)
 
+    for data_tuple in a_group.origin_tuples:
+        # Find the most appropriate group g in SG to perform migration
+        # result_find_migration = find_group_to_migrate(R_care, SelG, UG, SG)
 
 def m3ar_algo(D, R_initial):
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
@@ -353,8 +382,9 @@ def m3ar_algo(D, R_initial):
             if SelG not in UM:  # Add SelG to UM then process another group
                 UM.append(SelG)
                 SelG = None
-        else:
+        else:   # If we can find a migration operation
             print('LOOP ITERATION {}: MIGRATION FROM GROUP {} TO GROUP {}'.format(loop_iteration, result_find_migration.group_i.index, result_find_migration.group_j.index))
+            # g is the other group in the migration operation
             g = result_find_migration.group_i if result_find_migration.group_i.index != SelG.index else result_find_migration.group_j
             # Perform a migration operation
             do_migration(result_find_migration.group_i, result_find_migration.group_j, result_find_migration.migrant_tuples_indices)
@@ -363,7 +393,8 @@ def m3ar_algo(D, R_initial):
             if g in UG:
                 UG.remove(g)
 
-            # Check if now we have a safe group in the pair (SelG, g) or not
+            # Check if now we have a safe group in the pair (SelG, g) or not. 
+            # If there is one, collect it to add to the safe group
             if is_safe_group(SelG):
                 if SelG not in SG:
                     SG.append(SelG)
@@ -372,7 +403,7 @@ def m3ar_algo(D, R_initial):
                 if g not in SG:
                     SG.append(g)
 
-            # Handle which group next?
+            # Handle which group next? If there is any unsafe group in the pair, continue with it
             if is_unsafe_group(SelG):
                 pass    # Keep handling SelG
             elif is_unsafe_group(g):    # Continue with g
@@ -401,6 +432,13 @@ def m3ar_algo(D, R_initial):
 D = pandas.read_csv(DATA_FILE_PATH, names=DATA_COLUMNS,
                     index_col=False, skipinitialspace=True)
 D = D[RETAINED_DATA_COLUMNS]
+dataset_length = D.shape[0]
+print('Dataset length', dataset_length)
+MIN_SUP = MIN_SUP * dataset_length
 R_initial = [RULE([RULE_ITEM('Male', 'sex')], [RULE_ITEM(
-    'White', 'race')], support=0.4, confidence=0.4, budget=0.0)]
+    'White', 'race')], support=0.4, confidence=0.4, budget=0)]
+# Convert support percentage to support count
+for rule in R_initial:
+    rule.support = int(rule.support * dataset_length)
+print(R_initial)
 m3ar_algo(D, R_initial)
