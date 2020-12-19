@@ -3,6 +3,7 @@ import pandas
 import math
 import random
 import time
+import traceback
 from dataclasses import dataclass
 from itertools import combinations
 
@@ -15,7 +16,7 @@ QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
 MIN_SUP = 0.0045
 MIN_CONF = 0.2
 MIN_LENGTH = 2
-DESIRED_K = 2
+DESIRED_K = 4
 
 '''
     Notions
@@ -160,18 +161,51 @@ def data_tuple_supports_a_rule(data_tuple: DATA_TUPLE, rule: RULE):
     rule_items = rule.A + rule.B
     for item in rule_items:
         if data_tuple.data.get(item.attr) != item.value:
+            # Compare attribute value of data tuple with rule attribute value
             return False
 
     return True
 
 
-def construct_r_affected_by_a_migration(R_care: list, T: list):
+def rule_contains_attr_val(rule: RULE, attr_name, attr_value):
+    '''Check if a rule contains the attribute value indicated by attr_name, attr_value'''
+    rule_items = rule.A + rule.B
+    for rule_item in rule_items:
+        if rule_item.attr == attr_name and rule_item.value != attr_value:
+            return True
+
+    return True
+
+
+def group_first_tuple(a_group: GROUP):
+    '''Return the first tuple of group from origin_tuples or received_tuples'''
+    if len(a_group.origin_tuples) > 0:
+        return a_group.origin_tuples[0]
+
+    if len(a_group.received_tuples) > 0:
+        return a_group.origin_tuples[0]
+
+    return None
+
+
+def move_data_tuple_affect_a_rule(data_tuple: DATA_TUPLE, rule: RULE, group_j: GROUP):
+    group_j_first_tuple = group_first_tuple(group_j)
+    # Loop through quasi attributes of the data tuple then compare with the destination group (group j)'s first tuple
+    for attr in QUASI_ATTRIBUTES:
+        if group_j_first_tuple.data.get(attr) != data_tuple.data.get(attr):
+            if rule_contains_attr_val(rule, attr, data_tuple.data.get(attr)):
+                return True
+
+    return False
+
+
+def construct_r_affected_by_a_migration(R_care: list, T: list, group_j: GROUP):
     '''Construct the rule set affected 
     by a migration operation of tuples T from group i to group j'''
-    R_result = []
+    R_result = []    
     for rule in R_care:
         for data_tuple in T:
-            if data_tuple_supports_a_rule(data_tuple, rule):
+            if move_data_tuple_affect_a_rule(data_tuple, rule, group_j):
                 R_result.append(rule)
 
     return R_result
@@ -194,17 +228,20 @@ def has_group_given_tuples(a_group: GROUP):
     return len(a_group.origin_tuples) < a_group.origin_len
 
 
-def choose_group_tuples_for_migration(R_care: list, a_group: GROUP, no_tuples: int):  
+def choose_group_tuples_for_migration(R_care: list, group_i: GROUP, no_tuples: int, group_j):  
     '''
     Return indices of tuples selected for a migration  operation of <no_tuples> tuples from <a_group>
     '''
-    comb = combinations(range(len(a_group.origin_tuples)), no_tuples)
+    comb = combinations(range(len(group_i.origin_tuples)), no_tuples)
 
     for a_comb in list(comb):   # Encounter a combination that is good get it
-        if migration_check_budget_all_rules_affected_positive(R_care, [a_group.origin_tuples[i] for i in a_comb]):
-            return a_comb
+        tuples_consider_to_move = [group_i.origin_tuples[i] for i in a_comb]
+        R_affected = construct_r_affected_by_a_migration(R_care, tuples_consider_to_move, group_j)
+        budgets_all_rules_affected_positive = all(rule.budget > 0 for rule in R_affected)
+        if budgets_all_rules_affected_positive:
+            return a_comb, R_affected
 
-    return None
+    return None, []
 
 '''
 2. g(i)⎯T->g(j) and ∀t∈T → (∀r ∈ R(t),g(i)->g(j)->Budget(r) > 0)
@@ -212,15 +249,15 @@ If migrating tuples T from group i to group j, all rules affected must have posi
 '''
 
 
-def migration_check_budget_all_rules_affected_positive(R_care, T):
+def migration_check_budget_all_rules_affected_positive(R_care: list, T: list, group_j: GROUP):
     '''Check if budget of the rules affected by a migration operation positive'''
-    R_affected = construct_r_affected_by_a_migration(R_care, T)
-    return all(rule.budget > 0 for rule in R_affected)
+    R_affected = construct_r_affected_by_a_migration(R_care, T, group_j)
+    return all(rule.budget > 0 for rule in R_affected), R_affected
 
 
-def budgets_of_rules_affected_by_migrating_a_tuple(R_care, t: DATA_TUPLE):
+def budgets_of_rules_affected_by_migrating_a_tuple(R_care, t: DATA_TUPLE, group_j: GROUP):
     '''Calculate budgets of rules affected by migrating a data tuple to another group'''
-    R_affected = construct_r_affected_by_a_migration(R_care, [t])
+    R_affected = construct_r_affected_by_a_migration(R_care, [t], group_j)
     return [rule.budget for rule in R_affected]
 
 
@@ -248,37 +285,29 @@ def apply_policies(R_care, group_i, group_j, migration_direction='l2r'):
     '''
     Consider policies to perform a member migration from group i to group j
     '''
-    ableToMigrate, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed = False, [], -1, -9999, -1
+    ableToMigrate, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed, R_affected = False, [], -1, -9999, -1, []
     start = time.time()
     # POLICY 1
     if is_unsafe_group(group_i) and has_group_received_tuples(group_i):
-        return ableToMigrate, group_i, group_j, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed
+        # print('GROUP {} HAS RECEIVED TUPLES BEFORE, CANNOT GIVE TO GROUP {}'.format(group_i.index, group_j.index))
+        return ableToMigrate, group_i, group_j, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed, R_affected
     # Group j cannot receive more tuples because it is an unsafe group and it has given its tuples to another before
     if is_unsafe_group(group_j) and has_group_given_tuples(group_j):
-        return ableToMigrate, group_i, group_j, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed
+        # print('GROUP {} HAS GIVEN TUPLES BEFORE, CANNOT RECEIVE FROM GROUP {}'.format(group_j.index, group_i.index))
+        return ableToMigrate, group_i, group_j, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed, R_affected
     # POLICY 3
     no_migrant_tuples = cal_number_of_migrant_tuples(group_i, group_j, migration_direction)
     # POLICY 2
     if no_migrant_tuples > 0:
         group_risk_before = group_risk(group_i) + group_risk(group_j)
         # Select tuples from group i to satisfy the condition in which the budget all rules affected greater than 0
-        migrant_tuples_indices = choose_group_tuples_for_migration(R_care, group_i, no_migrant_tuples)
-        ableToMigrate = True
-        risk_reduction = calc_risk_reduction(group_i, group_j, no_migrant_tuples)
+        migrant_tuples_indices, R_affected = choose_group_tuples_for_migration(R_care, group_i, no_migrant_tuples, group_j)
+        if migrant_tuples_indices:  # if find a satisfied tuples
+            ableToMigrate = True
+            risk_reduction = calc_risk_reduction(group_i, group_j, no_migrant_tuples)
 
     time_elapsed = time.time() - start    
-    return ableToMigrate, group_i, group_j, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed
-
-
-def group_first_tuple(a_group: GROUP):
-    '''Return the first tuple of group from origin_tuples or received_tuples'''
-    if len(a_group.origin_tuples) > 0:
-        return a_group.origin_tuples[0]
-
-    if len(a_group.received_tuples) > 0:
-        return a_group.origin_tuples[0]
-
-    return None
+    return ableToMigrate, group_i, group_j, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed, R_affected
 
 
 def convert_quasi_attributes(data_tuple: DATA_TUPLE, dst_data_tuple: DATA_TUPLE):
@@ -306,7 +335,7 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
     remaining_groups = UG + SG
     results = []
     for group in remaining_groups:
-        if group.group_index != selected_group.group_index:
+        if group.index != selected_group.index:
             # Start to apply policies
             factors = apply_policies(R_care, selected_group, group, 'l2r')
             factors_reverse = apply_policies(R_care, group, selected_group, 'r2l')
@@ -319,10 +348,27 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
         return None
     
     # Construct pandas DataFrame results
-    resultsDataFrame = pandas.DataFrame(results, columns=['ableToMigrate', 'group_i', 'group_j', 'migrant_tuples_indices', 'no_migrant_tuples', 'risk_reduction', 'time_elapsed'])
+    resultsDataFrame = pandas.DataFrame(results, columns=['ableToMigrate', 'group_i', 'group_j', 'migrant_tuples_indices', 'no_migrant_tuples', 'risk_reduction', 'time_elapsed', 'R_affected'])    
     # Get the best migration selection
     resultsDataFrame.sort_values(by=['time_elapsed', 'risk_reduction', 'no_migrant_tuples'], ascending=[True, False, True])
+    print(resultsDataFrame)
     return resultsDataFrame.iloc[0]
+
+
+# Migrate the data tuple into the most useful group of a safe group
+def find_group_to_move_dispersing(R_care: list, t: DATA_TUPLE, SG: list):
+    min_no_rule_budgets = 99999
+    result = None
+    for considering_dst_group in SG:
+        # Start to apply policies
+        rule_budgets = budgets_of_rules_affected_by_migrating_a_tuple(R_care, t, considering_dst_group)
+        no_rules_with_negative_budget = sum(1 for budget in rule_budgets if budget < 0)
+
+        if no_rules_with_negative_budget < min_no_rule_budgets:
+            result = considering_dst_group
+            min_no_rule_budgets = no_rules_with_negative_budget
+
+    return result
 
 
 GROUPS, SG, UG, UM = [], [], [], []
@@ -335,7 +381,7 @@ def find_group(group_index):
     return None
 
 
-def disperse(a_group: GROUP):
+def disperse(R_care: list, a_group: GROUP):
     '''
     This group is still unsafe and it contains tuples migrated from other groups
     In loop we cannot find another group to perform migration with this group
@@ -344,15 +390,43 @@ def disperse(a_group: GROUP):
     # For all receiving tuples, return them to the source group
     for data_tuple in a_group.received_tuples:
         source_group = find_group(data_tuple.group_index)
-        print('Source group', source_group)
         source_group.origin_tuples.append(data_tuple)
+        print('DISPERSE: GROUP {} RETAKE THE DATA TUPLE {}'.format(source_group.index, data_tuple.index))
+        R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], source_group)
+        for rule in R_affected:
+            rule.budget += 1
         # If the source group now has only 1 tuple, add it to UM to be processed
         if group_length(source_group) == 1 and source_group not in UM:
             UM.append(source_group)
 
     for data_tuple in a_group.origin_tuples:
         # Find the most appropriate group g in SG to perform migration
-        # result_find_migration = find_group_to_migrate(R_care, SelG, UG, SG)
+        dst_group_to_migrate = find_group_to_move_dispersing(R_care, data_tuple, SG)
+        if dst_group_to_migrate:
+            dst_group_to_migrate.received_tuples.append(data_tuple)
+
+
+def pprint_data_tuple(data_tuple: DATA_TUPLE):
+    str_concat = '{}: '.format(data_tuple.index)
+    for index, value in data_tuple.data.items():
+        str_concat += str(value)
+        str_concat += ','
+    print(str_concat)
+
+
+def pprint_groups(groups: list):
+    for group in groups:
+        print('================================')
+        print('Group index', group.index)
+        print('Group length:', len(group.origin_tuples) + len(group.received_tuples), '===== Is safe?', is_safe_group(group))
+        print('Group origin tuples:', 'Empty' if len(group.origin_tuples) == 0 else '')
+        for t in group.origin_tuples:
+            pprint_data_tuple(t)
+        print('Group received tuples:', 'Empty' if len(group.received_tuples) == 0 else '')
+        for t in group.received_tuples:
+            pprint_data_tuple(t)
+        print('================================')
+
 
 def m3ar_algo(D, R_initial):
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
@@ -373,6 +447,7 @@ def m3ar_algo(D, R_initial):
         if SelG is None:  # Randomly pick a group SelG from unsafe groups set        
             SelG = random.choice(UG)
             UG.remove(SelG)
+            print('LOOP ITERATION {}. Randomly pop SelG. SelG index: {}'.format(loop_iteration, SelG.index))
 
         # Find the most appropriate group g in UG and SG to perform migration with SelG
         result_find_migration = find_group_to_migrate(R_care, SelG, UG, SG)        
@@ -381,6 +456,7 @@ def m3ar_algo(D, R_initial):
             print('LOOP ITERATION {}: NO RESULT FOR MIGRATION'.format(loop_iteration))
             if SelG not in UM:  # Add SelG to UM then process another group
                 UM.append(SelG)
+                print('ADD GROUP {} TO UM'.format(SelG.index))
                 SelG = None
         else:   # If we can find a migration operation
             print('LOOP ITERATION {}: MIGRATION FROM GROUP {} TO GROUP {}'.format(loop_iteration, result_find_migration.group_i.index, result_find_migration.group_j.index))
@@ -388,20 +464,27 @@ def m3ar_algo(D, R_initial):
             g = result_find_migration.group_i if result_find_migration.group_i.index != SelG.index else result_find_migration.group_j
             # Perform a migration operation
             do_migration(result_find_migration.group_i, result_find_migration.group_j, result_find_migration.migrant_tuples_indices)
+            for rule in result_find_migration.R_affected:
+                rule.budget -= 1
 
-            # Then remove the other group from UG if it is in
+            # Then remove the other group from UG if it is in: WHY?
             if g in UG:
                 UG.remove(g)
+                print('REMOVE GROUP {} FROM UG'.format(g.index))
 
             # Check if now we have a safe group in the pair (SelG, g) or not. 
             # If there is one, collect it to add to the safe group
             if is_safe_group(SelG):
                 if SelG not in SG:
                     SG.append(SelG)
+                    print('ADD GROUP {} TO SG'.format(SelG.index))
 
             if is_safe_group(g):
                 if g not in SG:
                     SG.append(g)
+                    print('ADD GROUP {} TO SG'.format(g.index))
+
+            print('CHECK SAFE GROUPS', 'SelG:', is_safe_group(SelG), '    g:', is_safe_group(g))
 
             # Handle which group next? If there is any unsafe group in the pair, continue with it
             if is_unsafe_group(SelG):
@@ -411,19 +494,23 @@ def m3ar_algo(D, R_initial):
             else:
                 # The next iteration we will choose another group to process
                 SelG = None
+    
+    print('=======================================')
+    print('=======================================')
+    print('=======================================')
+    print('START TO DISPERSE', len(UM), 'UM GROUPS')
+    print([group_length(group) for group in UM])
+    if len(UM) > 0: # Disperse
+        for g_um in UM:
+            disperse(R_care, g_um)
 
     print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))
-    print('=========SG=========')
-    print(SG)
-    print('=========UG=========')
-    print(UG)
-    print('=========UM=========')
-    print(UM)
+
+    print('==FINAL RULES==')
+    for rule in R_care:
+        print(rule)
     print('=========FINAL GROUPS=========')
-    print(GROUPS)
-    # if len(UM) > 0: # Disperse
-    #     for g in UM:
-    #         disperse(g)
+    pprint_groups(GROUPS)
 
 
 # Main
