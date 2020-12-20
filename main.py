@@ -7,7 +7,8 @@ import traceback
 from dataclasses import dataclass
 from itertools import combinations
 
-DATA_FILE_PATH = './dataset/adult-min.data'
+DATA_FILE_PATH = './dataset/adult-min-100.data'
+# DATA_FILE_PATH = './dataset/adult.data'
 DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
                 'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country']
 RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
@@ -351,7 +352,7 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
     resultsDataFrame = pandas.DataFrame(results, columns=['ableToMigrate', 'group_i', 'group_j', 'migrant_tuples_indices', 'no_migrant_tuples', 'risk_reduction', 'time_elapsed', 'R_affected'])    
     # Get the best migration selection
     resultsDataFrame.sort_values(by=['time_elapsed', 'risk_reduction', 'no_migrant_tuples'], ascending=[True, False, True])
-    print(resultsDataFrame)
+    # print('COMPARISON RESULTS', resultsDataFrame)
     return resultsDataFrame.iloc[0]
 
 
@@ -387,11 +388,13 @@ def disperse(R_care: list, a_group: GROUP):
     In loop we cannot find another group to perform migration with this group
     Disperse, return or move (Giai tan) tuples that have been migrated into this group to other ones
     '''
+    print('DISPERSE GROUP', a_group.index)
+    pprint_groups([a_group])
     # For all receiving tuples, return them to the source group
     for data_tuple in a_group.received_tuples:
         source_group = find_group(data_tuple.group_index)
         source_group.origin_tuples.append(data_tuple)
-        print('DISPERSE: GROUP {} RETAKE THE DATA TUPLE {}'.format(source_group.index, data_tuple.index))
+        print('DISPERSE: GROUP {} RETAKES THE DATA TUPLE {}'.format(source_group.index, data_tuple.index))
         R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], source_group)
         for rule in R_affected:
             rule.budget += 1
@@ -403,6 +406,7 @@ def disperse(R_care: list, a_group: GROUP):
         # Find the most appropriate group g in SG to perform migration
         dst_group_to_migrate = find_group_to_move_dispersing(R_care, data_tuple, SG)
         if dst_group_to_migrate:
+            print('DISPERSE: GROUP {} TAKES THE DATA TUPLE {} FROM GROUP {}'.format(dst_group_to_migrate.index, data_tuple.index, a_group.index))
             dst_group_to_migrate.received_tuples.append(data_tuple)
 
 
@@ -427,6 +431,25 @@ def pprint_groups(groups: list):
             pprint_data_tuple(t)
         print('================================')
 
+def export_dataset(groups: list):
+    '''Write the modified dataset to file'''
+    def write_data_tuple(t: DATA_TUPLE, f):
+        str_concat = ''
+        for index, value in t.data.items():
+            str_concat += str(value)
+            str_concat += ','
+
+        str_concat = str_concat[:-1]
+        f.write(str_concat + '\n')
+        
+    output_file_name = 'modified_ds.data'
+    with open(output_file_name, 'w') as f:
+        for group in groups:
+            for t in group.origin_tuples:
+                write_data_tuple(t, f)
+
+            for t in group.received_tuples:
+                write_data_tuple(t, f)                
 
 def m3ar_algo(D, R_initial):
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
@@ -459,7 +482,7 @@ def m3ar_algo(D, R_initial):
                 print('ADD GROUP {} TO UM'.format(SelG.index))
                 SelG = None
         else:   # If we can find a migration operation
-            print('LOOP ITERATION {}: MIGRATION FROM GROUP {} TO GROUP {}'.format(loop_iteration, result_find_migration.group_i.index, result_find_migration.group_j.index))
+            print('LOOP ITERATION {}: MIGRATION {} TUPLES FROM GROUP {} WITH LENGTH {} TO GROUP {} WITH LENGTH {}'.format(loop_iteration, result_find_migration.no_migrant_tuples, result_find_migration.group_i.index, group_length(result_find_migration.group_i), result_find_migration.group_j.index, group_length(result_find_migration.group_j)))
             # g is the other group in the migration operation
             g = result_find_migration.group_i if result_find_migration.group_i.index != SelG.index else result_find_migration.group_j
             # Perform a migration operation
@@ -470,21 +493,21 @@ def m3ar_algo(D, R_initial):
             # Then remove the other group from UG if it is in: WHY?
             if g in UG:
                 UG.remove(g)
-                print('REMOVE GROUP {} FROM UG'.format(g.index))
+                print('LOOP ITERATION {}: REMOVE GROUP {} FROM UG BECAUSE IT IS AN UNSAFE GROUP'.format(loop_iteration, g.index))
 
             # Check if now we have a safe group in the pair (SelG, g) or not. 
-            # If there is one, collect it to add to the safe group
+            # If there is one, collect it and add it to the safe group
             if is_safe_group(SelG):
                 if SelG not in SG:
                     SG.append(SelG)
-                    print('ADD GROUP {} TO SG'.format(SelG.index))
+                    print('LOOP ITERATION {}: ADD GROUP {} TO SG'.format(loop_iteration, SelG.index))
 
             if is_safe_group(g):
                 if g not in SG:
                     SG.append(g)
-                    print('ADD GROUP {} TO SG'.format(g.index))
+                    print('LOOP ITERATION {}: ADD GROUP {} TO SG'.format(loop_iteration, g.index))
 
-            print('CHECK SAFE GROUPS', 'SelG:', is_safe_group(SelG), '    g:', is_safe_group(g))
+            print('LOOP ITERATION {}: CHECK SAFE GROUPS - SelG: {} - g: {}'.format(loop_iteration, is_safe_group(SelG), is_safe_group(g)))
 
             # Handle which group next? If there is any unsafe group in the pair, continue with it
             if is_unsafe_group(SelG):
@@ -494,23 +517,26 @@ def m3ar_algo(D, R_initial):
             else:
                 # The next iteration we will choose another group to process
                 SelG = None
+
     
+    print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))
     print('=======================================')
     print('=======================================')
     print('=======================================')
     print('START TO DISPERSE', len(UM), 'UM GROUPS')
-    print([group_length(group) for group in UM])
+    print('LENGTH OF UM GROUPS:', [group_length(group) for group in UM])
     if len(UM) > 0: # Disperse
         for g_um in UM:
             disperse(R_care, g_um)
 
-    print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))
+    print('AFTER DISPERSING. UM length: {}\n'.format(len(UM)))
 
     print('==FINAL RULES==')
     for rule in R_care:
         print(rule)
     print('=========FINAL GROUPS=========')
     pprint_groups(GROUPS)
+    export_dataset(GROUPS)
 
 
 # Main
