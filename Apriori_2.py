@@ -13,29 +13,31 @@ import json
 # Load data
 ###########
 
-adult = pd.read_csv('dataset/adult.data', header=None)
-adult.columns = ['age', 'workclass', 'fnlwgt', 'education',
-                 'education-num', 'marital-status', 'occupation', 'relationship', 'race',
-                 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'income_category']
+DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
+                'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country']
+RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
+                         'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
 
+adult = pd.read_csv('dataset/adult.data', names=DATA_COLUMNS, index_col=False, skipinitialspace=True)
+adult = adult[RETAINED_DATA_COLUMNS]
+print(adult)
 
 ################
 # Pre-processing
 ################
 
 #drop redundant column
-adult = adult.drop("education-num", axis=1)
+# adult = adult.drop("education-num", axis=1)
 
 #deal with ? entries
-columns_with_blank_entries = ["workclass", "occupation", "native-country"]
+columns_with_blank_entries = ["workclass", "native-country"]
 for column in columns_with_blank_entries:
     adult["converted_" +
           column] = adult[column].astype(str).replace(" ", "")+"_"+column
     adult = adult.drop(column, axis=1)
 
 #deal with numeric attribures
-numeric_columns = ["age", "fnlwgt", "capital-gain",
-                   "capital-loss", "hours-per-week"]
+numeric_columns = ["age", "capital-gain", "hours-per-week"]
 for column in numeric_columns:
     bins = np.histogram(adult[column])
     bins = list(bins[1])  # generate 10 equal-width bins
@@ -163,8 +165,8 @@ def rule_confidence(left_hand_side, right_hand_side):
     pass
 
 
-if __name__ == '__main__':
-    support = 0.23
+if __name__ == '__main__':    
+    support = 0.3
     L, C = apriori(dict_table, support=support)
     number_of_frequent_itemsets = sum(len(x) for x in L)
     print(" ")
