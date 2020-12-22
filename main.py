@@ -6,76 +6,7 @@ import time
 import traceback
 from dataclasses import dataclass
 from itertools import combinations
-
-DATA_FILE_PATH = './dataset/adult-min-100.data'
-# DATA_FILE_PATH = './dataset/adult.data'
-DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
-                'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country']
-RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
-                         'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
-QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
-MIN_SUP = 0.0045
-MIN_CONF = 0.2
-MIN_LENGTH = 2
-DESIRED_K = 4
-
-'''
-    Notions
-    Rule A->B
-        a_rule:
-            A
-            B
-            support
-            confidence
-        MIN_SUP sm
-        MIN_CONF cm
-        Support (A->B) = s
-        Confidence (A->B) = c
-    Group: Set of tuples
-'''
-
-
-@dataclass
-class RULE:
-    A: list
-    B: list
-    support: float
-    confidence: float
-    budget: float
-
-
-@dataclass
-class RULE_ITEM:
-    value: any
-    attr: str
-
-
-@dataclass
-class GROUP:
-    index: int
-    origin_len: int
-    origin_tuples: list
-    received_tuples: list
-
-
-@dataclass
-class DATA_TUPLE:
-    index: int
-    data: pandas.Series
-    group_index: int
-
-
-# METRICS FOR DATA QUALITY
-def newly_generated_rules_percentage(D):
-    pass
-
-
-def no_loss_rules(D):
-    pass
-
-
-def different_rules_percentage(D):
-    pass
+from common import DATA_FILE_PATH, DATA_COLUMNS, RETAINED_DATA_COLUMNS, QUASI_ATTRIBUTES, MIN_SUP, MIN_CONF, DESIRED_K, RULE, RULE_ITEM, GROUP, DATA_TUPLE, find_group
 
 
 # Check if an itemset contains quasi attributes
@@ -374,13 +305,6 @@ def find_group_to_move_dispersing(R_care: list, t: DATA_TUPLE, SG: list):
 
 GROUPS, SG, UG, UM = [], [], [], []
 
-def find_group(group_index):
-    for group in GROUPS:
-        if group.group_index == group_index:
-            return group
-
-    return None
-
 
 def disperse(R_care: list, a_group: GROUP):
     '''
@@ -392,7 +316,7 @@ def disperse(R_care: list, a_group: GROUP):
     pprint_groups([a_group])
     # For all receiving tuples, return them to the source group
     for data_tuple in a_group.received_tuples:
-        source_group = find_group(data_tuple.group_index)
+        source_group = find_group(data_tuple.group_index, GROUPS)
         source_group.origin_tuples.append(data_tuple)
         print('DISPERSE: GROUP {} RETAKES THE DATA TUPLE {}'.format(source_group.index, data_tuple.index))
         R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], source_group)
@@ -449,9 +373,21 @@ def export_dataset(groups: list):
                 write_data_tuple(t, f)
 
             for t in group.received_tuples:
-                write_data_tuple(t, f)                
+                write_data_tuple(t, f)
+
+
+def remove_group(group: GROUP, group_list: list):
+    if group in group_list:
+        group_list.remove(group)
+
+
+def add_group(group: GROUP, group_list: list):
+    if group not in group_list:
+        group_list.append(group)
+
 
 def m3ar_algo(D, R_initial):
+    start_time = time.time()
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
     GROUPS, SG, UG = build_groups(D)
     UM = []  # Set of groups that cannot migrate member with other groups
@@ -477,10 +413,8 @@ def m3ar_algo(D, R_initial):
         # If cannot find such a group, add it to the unmigrant UM set
         if result_find_migration is None:
             print('LOOP ITERATION {}: NO RESULT FOR MIGRATION'.format(loop_iteration))
-            if SelG not in UM:  # Add SelG to UM then process another group
-                UM.append(SelG)
-                print('ADD GROUP {} TO UM'.format(SelG.index))
-                SelG = None
+            add_group(SelG, UM)
+            SelG = None
         else:   # If we can find a migration operation
             print('LOOP ITERATION {}: MIGRATION {} TUPLES FROM GROUP {} WITH LENGTH {} TO GROUP {} WITH LENGTH {}'.format(loop_iteration, result_find_migration.no_migrant_tuples, result_find_migration.group_i.index, group_length(result_find_migration.group_i), result_find_migration.group_j.index, group_length(result_find_migration.group_j)))
             # g is the other group in the migration operation
@@ -490,22 +424,18 @@ def m3ar_algo(D, R_initial):
             for rule in result_find_migration.R_affected:
                 rule.budget -= 1
 
-            # Then remove the other group from UG if it is in: WHY?
-            if g in UG:
-                UG.remove(g)
-                print('LOOP ITERATION {}: REMOVE GROUP {} FROM UG BECAUSE IT IS AN UNSAFE GROUP'.format(loop_iteration, g.index))
-
             # Check if now we have a safe group in the pair (SelG, g) or not. 
             # If there is one, collect it and add it to the safe group
             if is_safe_group(SelG):
-                if SelG not in SG:
-                    SG.append(SelG)
-                    print('LOOP ITERATION {}: ADD GROUP {} TO SG'.format(loop_iteration, SelG.index))
+                add_group(SelG, SG)
+                print('LOOP ITERATION {}: ADD GROUP {} TO SG'.format(loop_iteration, SelG.index))
 
             if is_safe_group(g):
-                if g not in SG:
-                    SG.append(g)
-                    print('LOOP ITERATION {}: ADD GROUP {} TO SG'.format(loop_iteration, g.index))
+                add_group(g, SG)
+                print('LOOP ITERATION {}: ADD GROUP {} TO SG'.format(loop_iteration, g.index))
+
+                remove_group(g, UG)
+                print('LOOP ITERATION {}: REMOVE GROUP {} FROM UG BECAUSE IT IS NOW A SAFE GROUP'.format(loop_iteration, g.index))
 
             print('LOOP ITERATION {}: CHECK SAFE GROUPS - SelG: {} - g: {}'.format(loop_iteration, is_safe_group(SelG), is_safe_group(g)))
 
@@ -518,18 +448,22 @@ def m3ar_algo(D, R_initial):
                 # The next iteration we will choose another group to process
                 SelG = None
 
-    
-    print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))
+    total_time = time.time() - start_time
+    print('RUN TIME: {} seconds'.format(total_time))
+    print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))    
     print('=======================================')
     print('=======================================')
     print('=======================================')
     print('START TO DISPERSE', len(UM), 'UM GROUPS')
-    print('LENGTH OF UM GROUPS:', [group_length(group) for group in UM])
+    print('NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
     if len(UM) > 0: # Disperse
         for g_um in UM:
-            disperse(R_care, g_um)
+            if group_length(g_um) > 0:  # Just consider group with length > 0
+                disperse(R_care, g_um)
 
-    print('AFTER DISPERSING. UM length: {}\n'.format(len(UM)))
+    print('AFTER DISPERSING: NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in SG)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in UG)))
 
     print('==FINAL RULES==')
     for rule in R_care:
