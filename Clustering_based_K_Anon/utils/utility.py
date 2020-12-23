@@ -5,6 +5,9 @@ public functions
 # !/usr/bin/env python
 # coding=utf-8
 
+def cmp(a, b):
+    return (a > b) - (a < b) 
+
 
 def cmp_str(element1, element2):
     """

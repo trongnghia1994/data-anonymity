@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import pandas
+import pickle
 
 DATA_FILE_PATH = './dataset/adult.data'
 DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
@@ -7,22 +8,17 @@ DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'mar
 RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
                          'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
 QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
-MIN_SUP = 0.3
+
+DATA_FILE_PATH = './dataset/adult.data'
+DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
+                'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country']
+RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
+                         'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
+QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
+MIN_SUP = 0.03
 MIN_CONF = 0.5
 MIN_LENGTH = 2
 DESIRED_K = 5
-
-DATA_FILE_PATH = './dataset/adult.data'
-# DATA_FILE_PATH = './dataset/adult.data'
-DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
-                'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country']
-RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
-                         'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
-QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
-MIN_SUP = 0.0045
-MIN_CONF = 0.2
-MIN_LENGTH = 2
-DESIRED_K = 4
 
 '''
     Notions
@@ -102,4 +98,13 @@ def find_group(group_index, groups: list = []):
     return None
 
 
-__all__ = ['DATA_FILE_PATH', 'DATA_COLUMNS', 'RETAINED_DATA_COLUMNS', 'QUASI_ATTRIBUTES', 'MIN_SUP', 'MIN_CONF', 'DESIRED_K', 'RULE', 'RULE_ITEM', 'GROUP', 'DATA_TUPLE', 'add_group', 'remove_group', 'find_group']
+def read_rules_data(data_file_path='output_rules.log'):
+    # Read list of rules from binary pickled file
+    with open('output_rules.log', 'rb') as f:
+        data = pickle.load(f)
+        return data
+
+    return None
+
+
+__all__ = ['DATA_FILE_PATH', 'DATA_COLUMNS', 'RETAINED_DATA_COLUMNS', 'QUASI_ATTRIBUTES', 'MIN_SUP', 'MIN_CONF', 'DESIRED_K', 'RULE', 'RULE_ITEM', 'GROUP', 'DATA_TUPLE', 'add_group', 'remove_group', 'find_group', 'read_rules_data']

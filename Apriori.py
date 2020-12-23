@@ -7,6 +7,7 @@ import numpy as np
 import math
 import itertools
 import json
+import pickle
 from itertools import combinations
 from common import DATA_COLUMNS, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM
 columns_with_blank_entries = ["workclass", "native-country"]
@@ -17,7 +18,7 @@ numeric_columns = ["age", "capital-gain", "hours-per-week"]
 # Load data
 ###########
 
-adult = pd.read_csv('dataset/adult-min-100.data', names=DATA_COLUMNS, index_col=False, skipinitialspace=True)
+adult = pd.read_csv('dataset/adult.data', names=DATA_COLUMNS, index_col=False, skipinitialspace=True)
 adult = adult[RETAINED_DATA_COLUMNS]
 
 ################
@@ -174,13 +175,27 @@ def gen_rules(item_set, dict_table, min_conf):
     for i in range(1, len(items)):
         lhs_candidates = list(itertools.combinations(items, i))
         for lhs in lhs_candidates:
+            rule = RULE(A=[], B=[], support=0, confidence=0, budget=0)
             rhs = tuple(set(items) - set(lhs))
             lhs_support = generate_counts_itemset(lhs, dict_table)
             rule_confidence = float(item_set['support']) / float(lhs_support)
             if rule_confidence >= min_conf:
-                print(lhs, '===>', rhs, 'support=', item_set['support'], 'confidence=', rule_confidence)
-                # for rule_item in lhs:
-                #     result.append(RULE([RULE_ITEM()], [], 0, 0, 0))
+                # print(lhs, '===>', rhs, 'support=', item_set['support'], 'confidence=', rule_confidence)                    
+                for rule_item in lhs:
+                    attr, value = rule_item.split('_')
+                    rule.A.append(RULE_ITEM(value, attr))
+
+                for rule_item in rhs:
+                    attr, value = rule_item.split('_')
+                    rule.B.append(RULE_ITEM(value, attr))
+
+                rule.support = item_set['support']
+                rule.confidence = rule_confidence
+                result.append(rule)
+    
+    # Write rules as binary to file  
+    with open('output_rules.log', 'wb') as f:
+        pickle.dump(result, f)
 
 
 def rule_confidence(left_hand_side, right_hand_side):

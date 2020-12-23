@@ -447,15 +447,46 @@ def m3ar_modified_algo(D, R_initial):
                 SelG = None
 
     total_time = time.time() - start_time
-    print('STAGE 1 RUN TIME: {} seconds'.format(total_time))
     print('TOTAL LOOPS: {}'.format(loop_iteration))
-    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS AFTER STAGE 1: {}, {}'.format(len(UG), len(SG)))
+    print('AFTER STAGE 1')
+    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len(UG), len(SG)))
+    print('NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(g) for g in UG)))
     print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
     # pprint_groups(GROUPS)
-    export_dataset(GROUPS)
-    
+    # export_dataset(GROUPS)
 
-    # STAGE 2
+    # STAGE 2: PROCESS ONE BY ONE IN THE UNSAFE GROUP, START WITH GROUP WITH SHORT LENGTH
+    UG = sorted(UG, key=lambda gr: group_length(gr))
+    for unsafe_group in UG:
+        if group_length(unsafe_group) <= DESIRED_K / 2:  # With small group disperse them
+            first_tuple_of_this_unsafe_group = unsafe_group.origin_tuples[0]
+            dst_group = find_group_to_move_dispersing(R_care, first_tuple_of_this_unsafe_group, SG)
+            if dst_group:
+                R_affected = construct_r_affected_by_a_migration(R_care, unsafe_group.origin_tuples, dst_group)
+                for rule in R_affected:
+                    rule.budget -= 1
+                for data_tuple in unsafe_group.origin_tuples:
+                    convert_quasi_attributes(data_tuple, group_first_tuple(unsafe_group))
+                dst_group.received_tuples.extend(unsafe_group.origin_tuples)                
+                remove_group(unsafe_group, UG)
+            else:
+                print('Cannot find any group for group {} to disperse to'.format(unsafe_group.index))
+        else:
+            no_tuples_needed_to_be_a_safe_group = DESIRED_K - group_length(unsafe_group)
+            free_tuples = no_tuples_needed_to_be_a_safe_group[no_tuples_needed_to_be_a_safe_group:]
+            picked_tuples = free_tuples[:no_tuples_needed_to_be_a_safe_group]
+            # Migrate these free tuples to this unsafe group to make it safe
+            R_affected = construct_r_affected_by_a_migration(R_care, picked_tuples, unsafe_group)
+            for rule in R_affected:
+                rule.budget -= 1
+            unsafe_group.received_tuples.extend(picked_tuples)
+
+    print('AFTER STAGE 2')
+    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len(UG), len(SG)))
+    print('NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(g) for g in UG)))
+    print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
+    total_time = time.time() - start_time
+    print('RUN TIME: {} seconds'.format(total_time))
 
 
     print('==FINAL RULES==')
@@ -475,10 +506,8 @@ D = D[RETAINED_DATA_COLUMNS]
 dataset_length = D.shape[0]
 print('Dataset length', dataset_length)
 MIN_SUP = MIN_SUP * dataset_length
-R_initial = [RULE([RULE_ITEM('Male', 'sex')], [RULE_ITEM(
-    'White', 'race')], support=0.62, confidence=0.8378378378378378, budget=0)]
+R_initial = read_rules_data()
 # Convert support percentage to support count
-for rule in R_initial:
-    rule.support = int(rule.support * dataset_length)
-print(R_initial)
+# for rule in R_initial:
+#     rule.support = int(rule.support * dataset_length)
 m3ar_modified_algo(D, R_initial)
