@@ -3,6 +3,7 @@ Calculate support and confidence of rules
 '''
 import pandas, copy    
 from dataclasses import dataclass
+from common import DATA_COLUMNS, RETAINED_DATA_COLUMNS, MIN_SUP, MIN_CONF
 
 ORIGIN_DATA_FILE_PATH = 'dataset/adult-min-100.data'
 MODIFIED_DATA_FILE_PATH = 'modified_ds.data'
@@ -22,13 +23,9 @@ class RULE_ITEM:
     value: any
     attr: str
 
-DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
-                'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country']
-RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
-                         'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
-MIN_SUP = 0.3
 
 INPUT_RULES = [RULE([RULE_ITEM('Male', 'sex')], [RULE_ITEM('White', 'race')], support_p=0.0, support=0, lhs_support=0, confidence=0.0)]
+
 
 def cal_supp_conf(data_file_path, columns, input_rules):
     rules = copy.deepcopy(input_rules)

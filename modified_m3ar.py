@@ -453,9 +453,10 @@ def m3ar_modified_algo(D, R_initial):
     print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
     # pprint_groups(GROUPS)
     export_dataset(GROUPS)
+    
 
     # STAGE 2
-    
+
 
     print('==FINAL RULES==')
     for rule in R_care:
