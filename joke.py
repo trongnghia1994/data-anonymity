@@ -10,4 +10,4 @@ df = pandas.read_csv(DATA_FILE_PATH, names=RETAINED_DATA_COLUMNS,
                     index_col=False, skipinitialspace=True)
 a = df['education'].unique()
 for i in sorted(a):
-    print('{};*'.format(i))
+    print("['{}','*'],".format(i))

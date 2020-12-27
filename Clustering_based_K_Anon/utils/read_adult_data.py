@@ -46,7 +46,6 @@ def read_data(ds_path=DATASET_PATH):
         numeric_dict.append(dict())
     # oder categorical attributes in intuitive order
     # here, we use the appear number
-    print('DEBUG', ds_path)
     data_file = open(ds_path, 'rU')
     for line in data_file:
         line = line.strip()

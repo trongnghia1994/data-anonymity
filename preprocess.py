@@ -9,7 +9,6 @@ def preprocess(input_file_path='dataset/adult.data'):
     df = df[RETAINED_DATA_COLUMNS]
 
     for col in RETAINED_DATA_COLUMNS:
-        print(col)
         df = df.drop(df[df[col] == '?'].index)
 
     output_file_path = input_file_path.split('/')[0] + '/' + input_file_path.split('/')[1].split('.')[0] + '-prep.data'

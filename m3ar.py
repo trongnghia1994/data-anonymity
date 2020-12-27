@@ -8,6 +8,7 @@ import sys
 import pickle
 from dataclasses import dataclass
 from itertools import combinations
+from ar_mining import cal_supp_conf
 from common import *
 
 
@@ -41,18 +42,6 @@ def rule_budget(a_rule):
         return min(a_rule.support - MIN_SUP, int(a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence))
 
 
-def is_safe_group(a_group: GROUP):
-    return group_length(a_group) >= DESIRED_K
-
-
-def is_unsafe_group(a_group: GROUP):
-    return not is_safe_group(a_group)
-
-
-def group_length(a_group: GROUP):
-    return (len(a_group.origin_tuples) + len(a_group.received_tuples))
-
-
 def calc_risk_reduction(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int):
     '''Calculate the risk reduction in case performing 
     a migration operation of <no_migrant_tuples> from group i to group j'''
@@ -64,44 +53,9 @@ def calc_risk_reduction(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int):
     return risk_before - (group_i_risk_after + group_j_risk_after)
 
 
-def build_groups(dataset: pandas.DataFrame, quasi_attrs: list = QUASI_ATTRIBUTES):
-    '''Build safe groups and unsafe groups from the initial dataset'''
-    UG, SG = [], []
-    DF_GROUPS = dataset.groupby(quasi_attrs)
-    group_index = 0
-    for _, df_group in DF_GROUPS:
-        group_data = []
-        for row in df_group.iterrows():
-            index, data = row
-            data_tuple = DATA_TUPLE(index, data, group_index)
-            group_data.append(data_tuple)
-
-        group = GROUP(group_index, len(group_data), group_data, [])
-        if is_safe_group(group):
-            SG.append(group)
-        else:
-            UG.append(group)
-
-        group_index += 1
-
-    GROUPS = SG + UG
-    return GROUPS, SG, UG
-
-
 # Construct the rule set we care (relating to quasi attributes)
 def construct_r_care(R_initial: list):
     return [rule for rule in R_initial if rule_contains_quasi_attr(rule)]
-
-
-def data_tuple_supports_a_rule(data_tuple: DATA_TUPLE, rule: RULE):
-    '''Check if a data tuple supports a rule'''
-    rule_items = rule.A + rule.B
-    for item in rule_items:
-        if data_tuple.data.get(item.attr) != item.value:
-            # Compare attribute value of data tuple with rule attribute value
-            return False
-
-    return True
 
 
 def rule_contains_attr_val(rule: RULE, attr_name, attr_value):
@@ -114,18 +68,10 @@ def rule_contains_attr_val(rule: RULE, attr_name, attr_value):
     return True
 
 
-def group_first_tuple(a_group: GROUP):
-    '''Return the first tuple of group from origin_tuples or received_tuples'''
-    if len(a_group.origin_tuples) > 0:
-        return a_group.origin_tuples[0]
-
-    if len(a_group.received_tuples) > 0:
-        return a_group.origin_tuples[0]
-
-    return None
-
-
 def move_data_tuple_affect_a_rule(data_tuple: DATA_TUPLE, rule: RULE, group_j: GROUP):
+    # if group_length(group_j) == 0:
+    #     return False
+
     group_j_first_tuple = group_first_tuple(group_j)
     # Loop through quasi attributes of the data tuple then compare with the destination group (group j)'s first tuple
     for attr in QUASI_ATTRIBUTES:
@@ -246,20 +192,13 @@ def apply_policies(R_care, group_i, group_j, migration_direction='l2r'):
     return ableToMigrate, group_i, group_j, migrant_tuples_indices, no_migrant_tuples, risk_reduction, time_elapsed, R_affected
 
 
-def convert_quasi_attributes(data_tuple: DATA_TUPLE, dst_data_tuple: DATA_TUPLE):
-    '''Convert all quasi attributes' values of <data_tuple> 
-    to the corresponding of <dst_data_tuple>'''
-    data_tuple.data.update(dst_data_tuple.data[:6])
-
-
 def do_migration(group_i: GROUP, group_j: GROUP, migrant_tuples_indices: list):
     '''Migrate tuples from group i to group j. Migrant tuples' indices figured out in migrant indices'''
     kept_tuples_indices = list(set(range(len(group_i.origin_tuples))) - set(migrant_tuples_indices)) 
-    dst_group_first_tuple = group_first_tuple(group_j)
     # Move tuples to another group
     for i in migrant_tuples_indices:
         tuple_to_move = group_i.origin_tuples[i]
-        convert_quasi_attributes(tuple_to_move, dst_group_first_tuple)
+        convert_quasi_attributes(tuple_to_move, group_j)
         group_j.received_tuples.append(tuple_to_move)
 
     # Group i now only has some tuples kept
@@ -302,95 +241,68 @@ def find_group_to_move_dispersing(R_care: list, t: DATA_TUPLE, SG: list):
 
         if no_rules_with_negative_budget < min_no_rule_budgets:
             result = considering_dst_group
-            min_no_rule_budgets = no_rules_with_negative_budget
+            min_no_rule_budgets = no_rules_with_negative_budget            
 
     return result
 
 
-GROUPS, SG, UG, UM = [], [], [], []
+def do_disperse_migration(R_care: list, src_group: GROUP, data_tuple: DATA_TUPLE, dst_group: GROUP, is_return=False):
+    R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], dst_group)
+    if not is_return:        
+        for rule in R_affected:
+            rule.budget -= 1
+    else:
+        for rule in R_affected:
+            rule.budget += 1
+
+    src_group.origin_tuples.remove(data_tuple)
+    convert_quasi_attributes(data_tuple, dst_group)
+    dst_group.received_tuples.append(data_tuple)
 
 
-def disperse(R_care: list, a_group: GROUP):
+def disperse(R_care: list, um_group: GROUP, GROUPS: list, SG: list, UM: list):
     '''
     This group is still unsafe and it contains tuples migrated from other groups
     In loop we cannot find another group to perform migration with this group
     Disperse, return or move (Giai tan) tuples that have been migrated into this group to other ones
     '''
-    print('DISPERSE GROUP', a_group.index)
-    pprint_groups([a_group])
+    print('DISPERSE GROUP', um_group.index)
+    # pprint_groups([um_group])
     # For all receiving tuples, return them to the source group
-    for data_tuple in a_group.received_tuples:
-        source_group = find_group(data_tuple.group_index, GROUPS)
-        source_group.origin_tuples.append(data_tuple)
-        print('DISPERSE: GROUP {} RETAKES THE DATA TUPLE {}'.format(source_group.index, data_tuple.index))
-        R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], source_group)
-        for rule in R_affected:
-            rule.budget += 1
+    while len(um_group.received_tuples) > 0:
+        data_tuple = um_group.received_tuples[0]
+        source_group_of_this_tuple = find_group(data_tuple.group_index, GROUPS)
+        do_disperse_migration(R_care, um_group, data_tuple, source_group_of_this_tuple, is_return=True)
+        print('DISPERSE: GROUP {} RETAKES THE DATA TUPLE {}'.format(source_group_of_this_tuple.index, data_tuple.index))        
         # If the source group now has only 1 tuple, add it to UM to be processed
-        if group_length(source_group) == 1 and source_group not in UM:
-            UM.append(source_group)
+        if group_length(source_group_of_this_tuple) == 1:
+            add_group(source_group_of_this_tuple, UM)
 
-    for data_tuple in a_group.origin_tuples:
+    while len(um_group.origin_tuples) > 0:
+        data_tuple = um_group.origin_tuples[0]
         # Find the most appropriate group g in SG to perform migration
         dst_group_to_migrate = find_group_to_move_dispersing(R_care, data_tuple, SG)
         if dst_group_to_migrate:
-            print('DISPERSE: GROUP {} TAKES THE DATA TUPLE {} FROM GROUP {}'.format(dst_group_to_migrate.index, data_tuple.index, a_group.index))
-            dst_group_to_migrate.received_tuples.append(data_tuple)
-
-
-def pprint_data_tuple(data_tuple: DATA_TUPLE):
-    str_concat = '{}: '.format(data_tuple.index)
-    for index, value in data_tuple.data.items():
-        str_concat += str(value)
-        str_concat += ','
-    print(str_concat)
-
-
-def pprint_groups(groups: list):
-    for group in groups:
-        print('================================')
-        print('Group index', group.index)
-        print('Group length:', len(group.origin_tuples) + len(group.received_tuples), '===== Is safe?', is_safe_group(group))
-        print('Group origin tuples:', 'Empty' if len(group.origin_tuples) == 0 else '')
-        for t in group.origin_tuples:
-            pprint_data_tuple(t)
-        print('Group received tuples:', 'Empty' if len(group.received_tuples) == 0 else '')
-        for t in group.received_tuples:
-            pprint_data_tuple(t)
-        print('================================')
-
-def export_dataset(groups: list, output_file_name='m3ar_ds.data'):
-    '''Write the modified dataset to file'''
-    def write_data_tuple(t: DATA_TUPLE, f):
-        str_concat = ''
-        for index, value in t.data.items():
-            str_concat += str(value)
-            str_concat += ','
-
-        str_concat = str_concat[:-1]
-        f.write(str_concat + '\n')
-        
-    output_file_name = 'output/' + output_file_name
-    with open(output_file_name, 'w') as f:
-        for group in groups:
-            for t in group.origin_tuples:
-                write_data_tuple(t, f)
-
-            for t in group.received_tuples:
-                write_data_tuple(t, f)
+            print('DISPERSE: GROUP {} TAKES THE DATA TUPLE {} FROM GROUP {}'.format(dst_group_to_migrate.index, data_tuple.index, um_group.index))
+            do_disperse_migration(R_care, um_group, data_tuple, dst_group_to_migrate, is_return=False)                
+        else:
+            print('DISPERSE: CANNOT FIND ANY GROUP TO MOVE TUPLES FROM GROUP {}'.format(um_group.index))
 
 
 def m3ar_algo(D, R_initial, output_file_name):
     start_time = time.time()
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
     GROUPS, SG, UG = build_groups(D)
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in SG)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in UG)))
     UM = []  # Set of groups that cannot migrate member with other groups
     print('K =', DESIRED_K)
     print('Number of safe groups and unsafe groups:', len(SG), len(UG))
     R_care = construct_r_care(R_initial)  # List of cared rules
     for r in R_care:
         r.budget = rule_budget(r)
-    print('R care', R_care)
+    print('R care')
+    pprint_rule_set(R_care)
     print('===============================================================================')
     SelG = None
     loop_iteration = 0
@@ -438,33 +350,51 @@ def m3ar_algo(D, R_initial, output_file_name):
                 pass    # Keep handling SelG
             elif is_unsafe_group(g):    # Continue with g
                 SelG = g
+                remove_group(g, UG)
             else:
                 # The next iteration we will choose another group to process
                 SelG = None
 
-    total_time = time.time() - start_time
-    print('RUN TIME: {} seconds'.format(total_time))
     print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))    
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K and group not in UM)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
+    print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))
     print('=======================================')
     print('=======================================')
     print('=======================================')
     print('START TO DISPERSE', len(UM), 'UM GROUPS')
     print('NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
-    if len(UM) > 0: # Disperse
-        for g_um in UM:
-            if group_length(g_um) > 0:  # Just consider group with length > 0
-                disperse(R_care, g_um)
+    while len(UM) > 0: # Disperse
+        g_um = UM.pop(0)
+        if group_length(g_um) > 0:  # Just consider group with length > 0
+            disperse(R_care, g_um, GROUPS, SG, UM)
 
     print('AFTER DISPERSING: NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in SG)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in UG)))
-
-    print('==FINAL RULES==')
-    for rule in R_care:
-        print(rule)
+    print('FINAL RESULTS: UG length: {}. SG length: {}. UM length: {}\n'.format(len(UG), len(SG), len(UM)))    
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
+    print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))
+    total_time = time.time() - start_time
+    print('RUN TIME: {} seconds'.format(total_time))
     print('=========FINAL GROUPS=========')
     pprint_groups(GROUPS)
+    output_file_name = 'output/' + output_file_name
     export_dataset(GROUPS, output_file_name)
+    print('==ORIGIN RULES==')
+    for rule in R_care:
+        pprint_rule(rule)
+    # Recalculate support and confidence of rules
+    print('==RULES MINED ON MODIFIED DATASET==')
+    modified_R_care = cal_supp_conf(output_file_name, RETAINED_DATA_COLUMNS, R_care)
+    for rule in modified_R_care:
+        pprint_rule(rule)
+    print('=========METRICS=========')
+    print('Number of groups:', len(GROUPS))
+    print('CAVG:', metrics_cavg(GROUPS))
 
 
 if __name__ == '__main__':
