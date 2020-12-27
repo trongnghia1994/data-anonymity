@@ -1,23 +1,17 @@
 from dataclasses import dataclass
 import pandas
 import pickle
+import random
 
-DATA_FILE_PATH = './dataset/adult.data'
+DATA_FILE_PATH = './dataset/adult-prep.data'
 DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
                 'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country']
 RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
                          'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
 QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
 
-DATA_FILE_PATH = './dataset/adult.data'
-DATA_COLUMNS = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
-                'relationship', 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country']
-RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
-                         'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
-QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
 MIN_SUP = 0.03
 MIN_CONF = 0.5
-MIN_LENGTH = 2
 DESIRED_K = 5
 
 '''
@@ -107,4 +101,10 @@ def read_rules_data(data_file_path='output_rules.log'):
     return None
 
 
-__all__ = ['DATA_FILE_PATH', 'DATA_COLUMNS', 'RETAINED_DATA_COLUMNS', 'QUASI_ATTRIBUTES', 'MIN_SUP', 'MIN_CONF', 'DESIRED_K', 'RULE', 'RULE_ITEM', 'GROUP', 'DATA_TUPLE', 'add_group', 'remove_group', 'find_group', 'read_rules_data']
+def pick_random_rules(no_rules: int):
+    rules = read_rules_data()
+    random.sample(rules, no_rules)
+    return random.sample(rules, no_rules)
+
+
+__all__ = ['DATA_FILE_PATH', 'DATA_COLUMNS', 'RETAINED_DATA_COLUMNS', 'QUASI_ATTRIBUTES', 'MIN_SUP', 'MIN_CONF', 'DESIRED_K', 'RULE', 'RULE_ITEM', 'GROUP', 'DATA_TUPLE', 'add_group', 'remove_group', 'find_group', 'read_rules_data', 'pick_random_rules']

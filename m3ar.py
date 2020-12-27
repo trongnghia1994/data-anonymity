@@ -6,7 +6,7 @@ import time
 import traceback
 from dataclasses import dataclass
 from itertools import combinations
-from common import DATA_FILE_PATH, DATA_COLUMNS, RETAINED_DATA_COLUMNS, QUASI_ATTRIBUTES, MIN_SUP, MIN_CONF, DESIRED_K, RULE, RULE_ITEM, GROUP, DATA_TUPLE, find_group
+from common import *
 
 
 # Check if an itemset contains quasi attributes
@@ -231,7 +231,6 @@ def apply_policies(R_care, group_i, group_j, migration_direction='l2r'):
     no_migrant_tuples = cal_number_of_migrant_tuples(group_i, group_j, migration_direction)
     # POLICY 2
     if no_migrant_tuples > 0:
-        group_risk_before = group_risk(group_i) + group_risk(group_j)
         # Select tuples from group i to satisfy the condition in which the budget all rules affected greater than 0
         migrant_tuples_indices, R_affected = choose_group_tuples_for_migration(R_care, group_i, no_migrant_tuples, group_j)
         if migrant_tuples_indices:  # if find a satisfied tuples
@@ -405,7 +404,7 @@ def m3ar_algo(D, R_initial):
         print('LOOP ITERATION {}. UG length: {}. SG length: {}. UM length: {}. SelG index: {}'.format(loop_iteration, len(UG), len(SG), len(UM), SelG.index if SelG is not None else None))
         if SelG is None:  # Randomly pick a group SelG from unsafe groups set        
             SelG = random.choice(UG)
-            UG.remove(SelG)
+            remove_group(SelG, UG)
             print('LOOP ITERATION {}. Randomly pop SelG. SelG index: {}'.format(loop_iteration, SelG.index))
 
         # Find the most appropriate group g in UG and SG to perform migration with SelG
@@ -482,10 +481,9 @@ D = D[RETAINED_DATA_COLUMNS]
 dataset_length = D.shape[0]
 print('Dataset length', dataset_length)
 MIN_SUP = MIN_SUP * dataset_length
-R_initial = [RULE([RULE_ITEM('Male', 'sex')], [RULE_ITEM(
-    'White', 'race')], support=0.4, confidence=0.4, budget=0)]
+R_initial = pick_random_rules(3)
 # Convert support percentage to support count
-for rule in R_initial:
-    rule.support = int(rule.support * dataset_length)
-print(R_initial)
+# for rule in R_initial:
+#     rule.support = int(rule.support * dataset_length)
+print('R initial', R_initial)
 m3ar_algo(D, R_initial)

@@ -9,6 +9,9 @@ from itertools import combinations
 from common import *
 
 
+OUTPUT_DATASET_PATH = 'modified_ds.data'
+
+
 # Check if an itemset contains quasi attributes
 def item_set_contains_quasi_attr(item_set: list):
     return any(rule_item.attr in QUASI_ATTRIBUTES for rule_item in item_set)
@@ -234,7 +237,6 @@ def apply_policies(R_care, group_i, group_j, migration_direction='l2r'):
     no_migrant_tuples = cal_number_of_migrant_tuples(group_i, group_j, migration_direction)
     # POLICY 2
     if no_migrant_tuples > 0:
-        group_risk_before = group_risk(group_i) + group_risk(group_j)
         # Select tuples from group i to satisfy the condition in which the budget all rules affected greater than 0
         migrant_tuples_indices, R_affected = choose_group_tuples_for_migration(R_care, group_i, no_migrant_tuples, group_j)
         if migrant_tuples_indices:  # if find a satisfied tuples
@@ -321,7 +323,7 @@ def pprint_groups(groups: list):
     for group in groups:
         print('================================')
         print('Group index', group.index)
-        print('Group length:', len(group.origin_tuples) + len(group.received_tuples), '===== Is safe?', is_safe_group(group))
+        print('Group length:', group_length(group), '===== Is safe?', is_safe_group(group))
         print('Group origin tuples:', 'Empty' if len(group.origin_tuples) == 0 else '')
         for t in group.origin_tuples:
             pprint_data_tuple(t)
@@ -341,7 +343,7 @@ def export_dataset(groups: list):
         str_concat = str_concat[:-1]
         f.write(str_concat + '\n')
         
-    output_file_name = 'modified_ds.data'
+    output_file_name = OUTPUT_DATASET_PATH
     with open(output_file_name, 'w') as f:
         for group in groups:
             for t in group.origin_tuples:
@@ -407,22 +409,22 @@ def m3ar_modified_algo(D, R_initial):
             print('Rules budget now are:')
             print([rule.budget for rule in R_care])
 
-            no_tuples_needed_to_be_a_safe_group = DESIRED_K - group_length(SelG)
+            no_tuples_needed_to_become_a_safe_group = DESIRED_K - group_length(SelG)
             no_tuples_picked = 0
             for data_tuple in free_tuples:
                 R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], SelG)
                 if all_rules_having_positive_budgets(R_affected):
                     for rule in R_affected:
                         rule.budget -= 1
-                    # Perform a migration of this free tuple to the destination group               
-                    SelG.received_tuples.append(data_tuple)
+                    # Perform a migration of this free tuple to the destination group                           
                     convert_quasi_attributes(data_tuple, group_first_tuple(SelG))
+                    SelG.received_tuples.append(data_tuple)
                     print('Data tuple picked is from group {}'.format(data_tuple.group_index))
                     source_group = find_group(data_tuple.group_index, GROUPS)
                     source_group.origin_tuples.remove(data_tuple)
                     free_tuples.remove(data_tuple)
                     no_tuples_picked += 1
-                    if no_tuples_picked == no_tuples_needed_to_be_a_safe_group:
+                    if no_tuples_picked == no_tuples_needed_to_become_a_safe_group:
                         # Pick enough, break to process the next unsafe group                        
                         add_group(SelG, SG)
                         remove_group(SelG, UG)
@@ -431,12 +433,12 @@ def m3ar_modified_algo(D, R_initial):
                         break
 
             # If look up in all free tuples but cannot find enough tuples to make this group safe, return them to source group
-            if no_tuples_picked < no_tuples_needed_to_be_a_safe_group:                
+            if no_tuples_picked < no_tuples_needed_to_become_a_safe_group:                
                 for data_tuple in SelG.received_tuples:
                     SelG.received_tuples.remove(data_tuple)
-                    source_group = find_group(data_tuple.group_index, GROUPS)
-                    source_group.origin_tuples.append(data_tuple)
+                    source_group = find_group(data_tuple.group_index, GROUPS)                    
                     convert_quasi_attributes(data_tuple, group_first_tuple(source_group))
+                    source_group.origin_tuples.append(data_tuple)
                     R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], source_group)
                     free_tuples.append(data_tuple)
                     add_group(SelG, UG)
@@ -449,6 +451,7 @@ def m3ar_modified_algo(D, R_initial):
     total_time = time.time() - start_time
     print('TOTAL LOOPS: {}'.format(loop_iteration))
     print('AFTER STAGE 1')
+    print('NUMBER OF WRONG SAFE GROUPS: {}'.format(len([g for g in SG if group_length(g) < DESIRED_K])))
     print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len(UG), len(SG)))
     print('NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(g) for g in UG)))
     print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
@@ -457,6 +460,7 @@ def m3ar_modified_algo(D, R_initial):
 
     # STAGE 2: PROCESS ONE BY ONE IN THE UNSAFE GROUP, START WITH GROUP WITH SHORT LENGTH
     UG = sorted(UG, key=lambda gr: group_length(gr))
+    UG_SMALL_DISPERSED, UG_BIG_DISPERSED = [], []
     for unsafe_group in UG:
         if group_length(unsafe_group) <= DESIRED_K / 2:  # With small group disperse them
             first_tuple_of_this_unsafe_group = unsafe_group.origin_tuples[0]
@@ -465,29 +469,55 @@ def m3ar_modified_algo(D, R_initial):
                 R_affected = construct_r_affected_by_a_migration(R_care, unsafe_group.origin_tuples, dst_group)
                 for rule in R_affected:
                     rule.budget -= 1
+                print('BEFORE DISPERSE SMALL GROUP', unsafe_group.index, group_length(unsafe_group))
                 for data_tuple in unsafe_group.origin_tuples:
-                    convert_quasi_attributes(data_tuple, group_first_tuple(unsafe_group))
-                dst_group.received_tuples.extend(unsafe_group.origin_tuples)                
-                remove_group(unsafe_group, UG)
+                    convert_quasi_attributes(data_tuple, group_first_tuple(dst_group))
+                    dst_group.received_tuples.append(data_tuple)                                    
+                for data_tuple in unsafe_group.received_tuples:
+                    convert_quasi_attributes(data_tuple, group_first_tuple(dst_group))
+                    dst_group.received_tuples.append(data_tuple)
+                unsafe_group.origin_tuples = []
+                unsafe_group.received_tuples = []
+                print('AFTER DISPERSE SMALL GROUP', unsafe_group.index, group_length(unsafe_group))
+                # remove_group(unsafe_group, UG)
+                UG_SMALL_DISPERSED.append(unsafe_group)
             else:
                 print('Cannot find any group for group {} to disperse to'.format(unsafe_group.index))
         else:
-            no_tuples_needed_to_be_a_safe_group = DESIRED_K - group_length(unsafe_group)
-            free_tuples = no_tuples_needed_to_be_a_safe_group[no_tuples_needed_to_be_a_safe_group:]
-            picked_tuples = free_tuples[:no_tuples_needed_to_be_a_safe_group]
+            no_tuples_needed_to_become_a_safe_group = DESIRED_K - group_length(unsafe_group)
+            picked_tuples = free_tuples[:no_tuples_needed_to_become_a_safe_group]
+            if len(picked_tuples) < no_tuples_needed_to_become_a_safe_group:    # This means the free tuples set is now empty
+                break
             # Migrate these free tuples to this unsafe group to make it safe
             R_affected = construct_r_affected_by_a_migration(R_care, picked_tuples, unsafe_group)
             for rule in R_affected:
                 rule.budget -= 1
+            for data_tuple in picked_tuples:
+                convert_quasi_attributes(data_tuple, group_first_tuple(unsafe_group))
             unsafe_group.received_tuples.extend(picked_tuples)
+            for data_tuple in picked_tuples:
+                free_tuples.remove(data_tuple)
+            # remove_group(unsafe_group, UG)
+            UG_BIG_DISPERSED.append(unsafe_group)
+
+    for g_sm in UG_SMALL_DISPERSED:
+        print('Small group dispersed', g_sm.index, group_length(g_sm))
+        remove_group(g_sm, UG)
+
+    for g_big in UG_BIG_DISPERSED:
+        print('Big group dispersed', g_big.index, group_length(g_big))
+        remove_group(g_big, UG)
 
     print('AFTER STAGE 2')
-    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len(UG), len(SG)))
+    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len([ug for ug in UG if group_length(ug) > 0]), len(SG)))
+    print('NUMBER OF UNSAFE GROUPS WITH LENGTH <= K/2 DISPERSED (MOVED TO A SAFE GROUP): {}'.format(len(UG_SMALL_DISPERSED)))
+    print('NUMBER OF UNSAFE GROUPS WITH LENGTH > K/2 DISPERSED (RECEIVED FREE TUPLES): {}'.format(len(UG_BIG_DISPERSED)))
     print('NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(g) for g in UG)))
     print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
+    print('UG_SMALL_DISPERSED', [g.index for g in UG_SMALL_DISPERSED])
+    print('UG_BIG_DISPERSED', [g.index for g in UG_BIG_DISPERSED])
     total_time = time.time() - start_time
     print('RUN TIME: {} seconds'.format(total_time))
-
 
     print('==FINAL RULES==')
     for rule in R_care:
@@ -510,4 +540,5 @@ R_initial = read_rules_data()
 # Convert support percentage to support count
 # for rule in R_initial:
 #     rule.support = int(rule.support * dataset_length)
+print('R initial', R_initial)
 m3ar_modified_algo(D, R_initial)

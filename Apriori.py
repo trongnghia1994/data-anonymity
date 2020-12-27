@@ -9,16 +9,16 @@ import itertools
 import json
 import pickle
 from itertools import combinations
-from common import DATA_COLUMNS, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM
+from common import DATA_COLUMNS, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM, MIN_SUP, MIN_CONF
 columns_with_blank_entries = ["workclass", "native-country"]
-numeric_columns = ["age", "capital-gain", "hours-per-week"]
+numeric_columns = ["capital-gain", "hours-per-week"]
 
 
 ###########
 # Load data
 ###########
 
-adult = pd.read_csv('dataset/adult.data', names=DATA_COLUMNS, index_col=False, skipinitialspace=True)
+adult = pd.read_csv('dataset/adult-prep.data', names=DATA_COLUMNS, index_col=False, skipinitialspace=True)
 adult = adult[RETAINED_DATA_COLUMNS]
 
 ################
@@ -193,6 +193,7 @@ def gen_rules(item_set, dict_table, min_conf):
                 rule.confidence = rule_confidence
                 result.append(rule)
     
+    result = result[:5]
     # Write rules as binary to file  
     with open('output_rules.log', 'wb') as f:
         pickle.dump(result, f)
@@ -202,9 +203,7 @@ def rule_confidence(left_hand_side, right_hand_side):
     pass
 
 
-if __name__ == '__main__':
-    MIN_SUP = 0.03
-    MIN_CONF = 0.5
+if __name__ == '__main__':    
     L, C = apriori(dict_table, support=MIN_SUP)
     number_of_frequent_itemsets = sum(len(x) for x in L)
     print("Number of frequent itemsets:")

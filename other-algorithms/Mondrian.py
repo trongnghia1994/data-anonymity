@@ -31,7 +31,7 @@ categorical = set((
     'race',
     'income',
 ))
-df = pd.read_csv("dataset/adult.data", sep=", ", header=None, names=names, index_col=False, engine='python')
+df = pd.read_csv("dataset/adult-prep.data", sep=", ", header=None, names=names, index_col=False, engine='python')
 
 print(df.head())
 
