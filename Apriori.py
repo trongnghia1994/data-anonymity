@@ -14,48 +14,6 @@ numeric_columns = ["capital-gain", "hours-per-week"]
 
 
 ###########
-# Load data
-###########
-
-adult = pd.read_csv(DATA_FILE_PATH, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
-
-################
-# Pre-processing
-################
-
-# deal with numeric attributes
-for column in numeric_columns:
-    bins = np.histogram(adult[column])
-    bins = list(bins[1])  # generate 10 equal-width bins
-    if(bins[0] == 0.0):
-        bins[0] = -0.1
-    category = pd.cut(adult[column], bins)
-    category = category.to_frame()
-    category.columns = ['converted_'+column]
-    adult = pd.concat([adult, category], axis=1)
-    adult["converted_"+column] = column + "_" + adult["converted_"+column].astype(str).replace(" ", "")
-    adult = adult.drop(column, axis=1)
-
-
-# Process remaining columns
-for column in RETAINED_DATA_COLUMNS:
-    if column not in numeric_columns:
-        adult["converted_" + column] = column + "_" + adult[column].astype(str).replace(" ", "")
-        adult = adult.drop(column, axis=1)
-
-
-print('MODIFIED DF')
-print(adult)
-
-
-#convert to dictionary format for using as an input to the program
-dict_table = {}
-temp_list = []
-for index, data in adult.iterrows():
-    dict_table[str(index)] = data.tolist()
-
-
-###########
 # Functions
 ###########
 
@@ -166,7 +124,7 @@ def apriori(dict_table, support):
 # Initialization
 ################
 
-def gen_rules(item_set, dict_table, min_conf):
+def gen_rules(item_set, dict_table, min_conf, output_file):
     result = []
     items = item_set['itemset']
     for i in range(1, len(items)):
@@ -192,16 +150,41 @@ def gen_rules(item_set, dict_table, min_conf):
     
     result = result[:5]
     # Write rules as binary to file  
-    with open('initial_rules.log', 'wb') as f:
+    with open(output_file, 'wb') as f:
         pickle.dump(result, f)
 
 
-def rule_confidence(left_hand_side, right_hand_side):
-    pass
+def apriori_gen_rules(input_ds=DATA_FILE_PATH):
+    adult = pd.read_csv(input_ds, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
+    
+    # deal with numeric attributes
+    for column in numeric_columns:
+        bins = np.histogram(adult[column])
+        bins = list(bins[1])  # generate 10 equal-width bins
+        if(bins[0] == 0.0):
+            bins[0] = -0.1
+        category = pd.cut(adult[column], bins)
+        category = category.to_frame()
+        category.columns = ['converted_'+column]
+        adult = pd.concat([adult, category], axis=1)
+        adult["converted_"+column] = column + "_" + adult["converted_"+column].astype(str).replace(" ", "")
+        adult = adult.drop(column, axis=1)
 
 
-if __name__ == '__main__':    
-    MIN_SUP, MIN_CONF = 0.4, 0.5
+    # Process remaining columns
+    for column in RETAINED_DATA_COLUMNS:
+        if column not in numeric_columns:
+            adult["converted_" + column] = column + "_" + adult[column].astype(str).replace(" ", "")
+            adult = adult.drop(column, axis=1)
+
+
+    #convert to dictionary format for using as an input to the program
+    dict_table = {}
+    temp_list = []
+    for index, data in adult.iterrows():
+        dict_table[str(index)] = data.tolist()
+    
+    output_file=input_ds.split('/')[1].split('.')[0] + '-rules.data'
     L, C = apriori(dict_table, support=MIN_SUP)
     number_of_frequent_itemsets = sum(len(x) for x in L)
     print("Number of frequent itemsets:")
@@ -212,4 +195,10 @@ if __name__ == '__main__':
     # Process from the itemsets with length = 2
     for item_set_group in C[1:]:
         for item_set in item_set_group:
-            gen_rules(item_set, dict_table, MIN_CONF)
+            gen_rules(item_set, dict_table, MIN_CONF, output_file)
+    
+    return output_file
+
+
+if __name__ == '__main__':    
+    apriori_gen_rules()

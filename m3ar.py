@@ -4,9 +4,14 @@ import math
 import random
 import time
 import traceback
+import sys
+import pickle
 from dataclasses import dataclass
 from itertools import combinations
 from common import *
+
+
+sys.stdout = open("m3ar_results.log", "w")
 
 
 # Check if an itemset contains quasi attributes
@@ -354,7 +359,7 @@ def pprint_groups(groups: list):
             pprint_data_tuple(t)
         print('================================')
 
-def export_dataset(groups: list):
+def export_dataset(groups: list, output_file_name='m3ar_ds.data'):
     '''Write the modified dataset to file'''
     def write_data_tuple(t: DATA_TUPLE, f):
         str_concat = ''
@@ -365,7 +370,7 @@ def export_dataset(groups: list):
         str_concat = str_concat[:-1]
         f.write(str_concat + '\n')
         
-    output_file_name = 'modified_ds.data'
+    output_file_name = 'output/' + output_file_name
     with open(output_file_name, 'w') as f:
         for group in groups:
             for t in group.origin_tuples:
@@ -375,17 +380,7 @@ def export_dataset(groups: list):
                 write_data_tuple(t, f)
 
 
-def remove_group(group: GROUP, group_list: list):
-    if group in group_list:
-        group_list.remove(group)
-
-
-def add_group(group: GROUP, group_list: list):
-    if group not in group_list:
-        group_list.append(group)
-
-
-def m3ar_algo(D, R_initial):
+def m3ar_algo(D, R_initial, output_file_name):
     start_time = time.time()
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
     GROUPS, SG, UG = build_groups(D)
@@ -469,20 +464,26 @@ def m3ar_algo(D, R_initial):
         print(rule)
     print('=========FINAL GROUPS=========')
     pprint_groups(GROUPS)
-    export_dataset(GROUPS)
+    export_dataset(GROUPS, output_file_name)
 
 
-# Main
-# A dataset reaches k-anonymity if total risks of all groups equals to 0
-# A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
-D = pandas.read_csv(DATA_FILE_PATH, names=RETAINED_DATA_COLUMNS,
-                    index_col=False, skipinitialspace=True)
-dataset_length = D.shape[0]
-print('Dataset length', dataset_length)
-MIN_SUP = MIN_SUP * dataset_length
-R_initial = pick_random_rules(3)
-# Convert support percentage to support count
-# for rule in R_initial:
-#     rule.support = int(rule.support * dataset_length)
-print('R initial', R_initial)
-m3ar_algo(D, R_initial)
+if __name__ == '__main__':
+    if len(sys.argv) > 2:
+        data_file_path, initial_rules_path = sys.argv[1], sys.argv[2]
+    else:
+        data_file_path = DATA_FILE_PATH
+        initial_rules_path = 'initial_rules.data'
+    # A dataset reaches k-anonymity if total risks of all groups equals to 0
+    # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
+    D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
+    dataset_length = D.shape[0]
+    print('Dataset length', dataset_length)    
+    MIN_SUP = MIN_SUP * dataset_length
+    R_initial = []
+    with open(initial_rules_path, 'rb') as f:
+        R_initial = pickle.load(f)
+    print('R initial', R_initial)
+    output_file_name = 'out_m3ar_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
+    m3ar_algo(D, R_initial, output_file_name)
+
+    sys.stdout.close()

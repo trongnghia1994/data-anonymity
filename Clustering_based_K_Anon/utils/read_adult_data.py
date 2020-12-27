@@ -17,22 +17,25 @@ import pickle
 
 import pdb
 
-ATT_NAMES = ['age', 'workclass', 'final_weight', 'education',
-             'education_num', 'marital_status', 'occupation', 'relationship',
-             'race', 'sex', 'capital_gain', 'capital_loss', 'hours_per_week',
-             'native_country', 'class']
+# ATT_NAMES = ['age', 'workclass', 'final_weight', 'education',
+#              'education_num', 'marital_status', 'occupation', 'relationship',
+#              'race', 'sex', 'capital_gain', 'capital_loss', 'hours_per_week',
+#              'native_country', 'class']
+ATT_NAMES = RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
+                'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
 # 8 attributes are chose as QI attributes
 # age and education levels are treated as numeric attributes
 # only matrial_status and workclass has well defined generalization hierarchies.
 # other categorical attributes only have 2-level generalization hierarchies.
-QI_INDEX = [0, 1, 4, 5, 6, 8, 9, 13]
-IS_CAT = [False, True, False, True, True, True, True, True]
+QI_INDEX = [0, 1, 2, 3, 4, 5]
+IS_CAT = [False, True, True, True, True, True]
 SA_INDEX = -1
+DATASET_PATH = 'Clustering_based_K_Anon/data/adult-prep.data'
 
 __DEBUG = False
 
 
-def read_data():
+def read_data(ds_path=DATASET_PATH):
     """
     read microda for *.txt and return read data
     """
@@ -43,7 +46,8 @@ def read_data():
         numeric_dict.append(dict())
     # oder categorical attributes in intuitive order
     # here, we use the appear number
-    data_file = open('Clustering_based_K_Anon/data/adult.data', 'rU')
+    print('DEBUG', ds_path)
+    data_file = open(ds_path, 'rU')
     for line in data_file:
         line = line.strip()
         # remove empty and incomplete lines
@@ -69,7 +73,7 @@ def read_data():
         if IS_CAT[i] is False:
             static_file = open('Clustering_based_K_Anon/data/adult_' + ATT_NAMES[QI_INDEX[i]] + '_static.pickle', 'wb')
             sort_value = list(numeric_dict[i].keys())
-            sort_value.sort()
+            sort_value.sort(cmp=cmp_str)
             pickle.dump((numeric_dict[i], sort_value), static_file)
             static_file.close()
     return data
@@ -99,7 +103,7 @@ def read_pickle_file(att_name):
         static_file = open('Clustering_based_K_Anon/data/adult_' + att_name + '_static.pickle', 'rb')
         (numeric_dict, sort_value) = pickle.load(static_file)
     except:
-        print("Pickle file not exists!!")
+        print "Pickle file not exists!!"
     static_file.close()
     result = NumRange(sort_value, numeric_dict)
     return result
@@ -115,7 +119,7 @@ def read_tree_file(treename):
     treefile = open(prefix + treename + postfix, 'rU')
     att_tree['*'] = GenTree('*')
     if __DEBUG:
-        print("Reading Tree" + treename)
+        print "Reading Tree" + treename
     for line in treefile:
         # delete \n
         if len(line) <= 1:
@@ -134,6 +138,6 @@ def read_tree_file(treename):
             except KeyError:
                 att_tree[t] = GenTree(t, att_tree[temp[i - 1]], isleaf)
     if __DEBUG:
-        print("Nodes No. = %d" % att_tree['*'].support)
+        print "Nodes No. = %d" % att_tree['*'].support
     treefile.close()
     return att_tree

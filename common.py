@@ -92,19 +92,19 @@ def find_group(group_index, groups: list = []):
     return None
 
 
-def read_rules_data(data_file_path='output_rules.log'):
+def read_rules_data(data_file_path='initial_rules.data'):
     # Read list of rules from binary pickled file
-    with open('output_rules.log', 'rb') as f:
+    with open(data_file_path, 'rb') as f:
         data = pickle.load(f)
         return data
 
     return None
 
 
-def pick_random_rules(no_rules: int):
-    rules = read_rules_data()
+def pick_random_rules(no_rules: int, data_file_path='initial_rules.data'):
+    rules = read_rules_data(data_file_path)
     random.sample(rules, no_rules)
     return random.sample(rules, no_rules)
 
 
-__all__ = ['DATA_FILE_PATH', 'RETAINED_DATA_COLUMNS', 'RETAINED_DATA_COLUMNS', 'QUASI_ATTRIBUTES', 'MIN_SUP', 'MIN_CONF', 'DESIRED_K', 'RULE', 'RULE_ITEM', 'GROUP', 'DATA_TUPLE', 'add_group', 'remove_group', 'find_group', 'read_rules_data', 'pick_random_rules']
+__all__ = ['DATA_FILE_PATH', 'DATA_COLUMNS', 'RETAINED_DATA_COLUMNS', 'QUASI_ATTRIBUTES', 'MIN_SUP', 'MIN_CONF', 'DESIRED_K', 'RULE', 'RULE_ITEM', 'GROUP', 'DATA_TUPLE', 'add_group', 'remove_group', 'find_group', 'read_rules_data', 'pick_random_rules']

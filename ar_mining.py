@@ -76,7 +76,6 @@ def data_tuple_supports_item_sets(rule_items: list, data_tuple: DATA_TUPLE):
                 # Construct number value range
                 op_comparison_1 = '>=' if str(rule_item.value)[0] == '[' else '>'
                 op_comparison_2 = '<=' if str(rule_item.value)[-1] == ']' else '<'
-                print('DEBUG', tuple_value, rule_item, rule_item.value[1: -1].split(','))
                 l, h = rule_item.value[1: -1].split(',')
                 l, h = float(l.strip()), float(h.strip())            
                 return OPERATORS[op_comparison_1](tuple_value, l) and OPERATORS[op_comparison_2](tuple_value, h) 
