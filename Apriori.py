@@ -9,8 +9,7 @@ import itertools
 import json
 import pickle
 from itertools import combinations
-from common import DATA_COLUMNS, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM, MIN_SUP, MIN_CONF
-columns_with_blank_entries = ["workclass", "native-country"]
+from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM, MIN_SUP, MIN_CONF
 numeric_columns = ["capital-gain", "hours-per-week"]
 
 
@@ -18,19 +17,13 @@ numeric_columns = ["capital-gain", "hours-per-week"]
 # Load data
 ###########
 
-adult = pd.read_csv('dataset/adult-prep.data', names=DATA_COLUMNS, index_col=False, skipinitialspace=True)
-adult = adult[RETAINED_DATA_COLUMNS]
+adult = pd.read_csv(DATA_FILE_PATH, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
 
 ################
 # Pre-processing
 ################
 
-# deal with ? entries
-for column in columns_with_blank_entries:
-    adult["converted_" + column] = column + "_" + adult[column].astype(str).replace(" ", "")
-    adult = adult.drop(column, axis=1)
-
-#deal with numeric attributes
+# deal with numeric attributes
 for column in numeric_columns:
     bins = np.histogram(adult[column])
     bins = list(bins[1])  # generate 10 equal-width bins
@@ -46,9 +39,13 @@ for column in numeric_columns:
 
 # Process remaining columns
 for column in RETAINED_DATA_COLUMNS:
-    if column not in columns_with_blank_entries and column not in numeric_columns:
+    if column not in numeric_columns:
         adult["converted_" + column] = column + "_" + adult[column].astype(str).replace(" ", "")
         adult = adult.drop(column, axis=1)
+
+
+print('MODIFIED DF')
+print(adult)
 
 
 #convert to dictionary format for using as an input to the program
@@ -195,7 +192,7 @@ def gen_rules(item_set, dict_table, min_conf):
     
     result = result[:5]
     # Write rules as binary to file  
-    with open('output_rules.log', 'wb') as f:
+    with open('initial_rules.log', 'wb') as f:
         pickle.dump(result, f)
 
 
@@ -204,6 +201,7 @@ def rule_confidence(left_hand_side, right_hand_side):
 
 
 if __name__ == '__main__':    
+    MIN_SUP, MIN_CONF = 0.4, 0.5
     L, C = apriori(dict_table, support=MIN_SUP)
     number_of_frequent_itemsets = sum(len(x) for x in L)
     print("Number of frequent itemsets:")

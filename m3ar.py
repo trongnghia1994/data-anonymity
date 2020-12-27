@@ -475,9 +475,8 @@ def m3ar_algo(D, R_initial):
 # Main
 # A dataset reaches k-anonymity if total risks of all groups equals to 0
 # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
-D = pandas.read_csv(DATA_FILE_PATH, names=DATA_COLUMNS,
+D = pandas.read_csv(DATA_FILE_PATH, names=RETAINED_DATA_COLUMNS,
                     index_col=False, skipinitialspace=True)
-D = D[RETAINED_DATA_COLUMNS]
 dataset_length = D.shape[0]
 print('Dataset length', dataset_length)
 MIN_SUP = MIN_SUP * dataset_length
