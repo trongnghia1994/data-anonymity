@@ -11,7 +11,7 @@ from itertools import combinations
 from common import *
 
 
-sys.stdout = open("modified_algo_results.log", "w")
+sys.stdout = open("log/modified_algo_results.log", "w")
 
 
 OUTPUT_DATASET_PATH = 'modified_ds.data'
@@ -533,8 +533,8 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 2:
-        data_file_path, initial_rules_path = sys.argv[1], sys.argv[2]
+    if len(sys.argv) > 3:
+        data_file_path, initial_rules_path, DESIRED_K = sys.argv[1], sys.argv[2], int(sys.argv[3])
     else:
         data_file_path = DATA_FILE_PATH
         initial_rules_path = 'initial_rules.data'
@@ -547,8 +547,8 @@ if __name__ == '__main__':
     R_initial = []
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
-    print('R initial', R_initial)    
-    output_file_name = 'out_mod_m3ar_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
+    print('R initial', R_initial)
+    output_file_name = 'out_mod_m3ar_' + str(DESIRED_K) + '_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
     m3ar_modified_algo(D, R_initial, output_file_name)
 
     sys.stdout.close()

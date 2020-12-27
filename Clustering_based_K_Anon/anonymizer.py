@@ -162,10 +162,8 @@ if __name__ == '__main__':
         FLAG = sys.argv[3]
         INPUT_DS_PATH = sys.argv[4]
         OUTPUT_DS_PATH = sys.argv[5]
-        print('DEBUG', INPUT_DS_PATH, OUTPUT_DS_PATH)
     except IndexError:
         pass
-    INPUT_K = 5
     # read record
     if DATA_SELECT == 'i':
         print "INFORMS data"
@@ -178,7 +176,8 @@ if __name__ == '__main__':
     if __DEBUG:
         # DATA = DATA[:2000]
         # print "Test anonymization with %d records" % len(DATA)
-        print sys.argv
+        # print sys.argv
+        pass
     if FLAG == 'k':
         get_result_k(ATT_TREES, DATA, TYPE_ALG)
     elif FLAG == 'qi':
@@ -193,7 +192,7 @@ if __name__ == '__main__':
         else:
             get_result_one(ATT_TREES, DATA, TYPE_ALG)
     else:
-        sys.stdout = open(TYPE_ALG + "_results.log", "w")
+        sys.stdout = open("log/" + TYPE_ALG + "_results.log", "w")
         try:
             INPUT_K = int(FLAG)
             get_result_one(ATT_TREES, DATA, TYPE_ALG, INPUT_K, OUTPUT_DS_PATH)
