@@ -137,11 +137,21 @@ def gen_rules(item_set, dict_table, min_conf, output_file):
             if rule_confidence >= min_conf:
                 # print(lhs, '===>', rhs, 'support=', item_set['support'], 'confidence=', rule_confidence)                    
                 for rule_item in lhs:
-                    attr, value = rule_item.split('_')
+                    attr, value = rule_item.split('_')                    
+                    if attr in numeric_columns: # Replace the , with -
+                        value = value.replace(' ', '')
+                        comma_pos = value.rfind(',')
+                        if comma_pos > -1:
+                            value = value[:comma_pos] + '-' + value[comma_pos + 1:]
                     rule.A.append(RULE_ITEM(value, attr))
 
                 for rule_item in rhs:
                     attr, value = rule_item.split('_')
+                    if attr in numeric_columns: # Replace the , with -
+                        value = value.replace(' ', '')
+                        comma_pos = value.rfind(',')
+                        if comma_pos > -1:
+                            value = value[:comma_pos] + '-' + value[comma_pos + 1:]
                     rule.B.append(RULE_ITEM(value, attr))
 
                 rule.support = item_set['support']

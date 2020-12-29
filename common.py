@@ -3,6 +3,7 @@ import pandas
 import pickle
 import random
 import operator
+import traceback
 
 
 DATA_FILE_PATH = './dataset/adult-prep.data'
@@ -181,6 +182,13 @@ def metrics_cavg(groups: list):
     return sum(group_length(group) for group in groups) / len(groups)
 
 
+def metrics_cavg_raw(groups: list):
+    total_size = 0
+    for _, group in groups:
+        total_size += len(group)
+    return total_size / len(groups)
+
+
 def remove_group(group: GROUP, group_list: list):
     if group in group_list:
         group_list.remove(group)
@@ -216,7 +224,7 @@ def pick_random_rules(no_rules: int, data_file_path='initial_rules.data'):
 
 
 def pprint_rule(rule: RULE):
-    print('({}) => ({}) - Support: {}, Confidence: {}, Budget: {}, LHS Support: {}'.format('-'.join([rule_item.value for rule_item in rule.A]), '-'.join([rule_item.value for rule_item in rule.B]), rule.support, rule.confidence, rule.budget, rule.lhs_support))
+    print('({}) => ({}) - Support: {}, Confidence: {}, Budget: {}, LHS Support: {}'.format(','.join([rule_item.value for rule_item in rule.A]), ','.join([rule_item.value for rule_item in rule.B]), rule.support, rule.confidence, rule.budget, rule.lhs_support))
     
 
 def pprint_rule_set(rules: list):
@@ -235,76 +243,76 @@ CAT_TREES = {
         ['Married-spouse-absent', 'alone', '*'],
     ],
     'native-country': [
-        ['Cambodia'-'*'],
-        ['Canada'-'*'],
-        ['China'-'*'],
-        ['Columbia'-'*'],
-        ['Cuba'-'*'],
-        ['Dominican-Republic'-'*'],
-        ['Ecuador'-'*'],
-        ['El-Salvador'-'*'],
-        ['England'-'*'],
-        ['France'-'*'],
-        ['Germany'-'*'],
-        ['Greece'-'*'],
-        ['Guatemala'-'*'],
-        ['Haiti'-'*'],
-        ['Holand-Netherlands'-'*'],
-        ['Honduras'-'*'],
-        ['Hong'-'*'],
-        ['Hungary'-'*'],
-        ['India'-'*'],
-        ['Iran'-'*'],
-        ['Ireland'-'*'],
-        ['Italy'-'*'],
-        ['Jamaica'-'*'],
-        ['Japan'-'*'],
-        ['Laos'-'*'],
-        ['Mexico'-'*'],
-        ['Nicaragua'-'*'],
-        ['Outlying-US(Guam-USVI-etc)'-'*'],
-        ['Peru'-'*'],
-        ['Philippines'-'*'],
-        ['Poland'-'*'],
-        ['Portugal'-'*'],
-        ['Puerto-Rico'-'*'],
-        ['Scotland'-'*'],
-        ['South'-'*'],
-        ['Taiwan'-'*'],
-        ['Thailand'-'*'],
-        ['Trinadad&Tobago'-'*'],
-        ['United-States'-'*'],
-        ['Vietnam'-'*'],
-        ['Yugoslavia'-'*'],
+        ['Cambodia','*'],
+        ['Canada','*'],
+        ['China','*'],
+        ['Columbia','*'],
+        ['Cuba','*'],
+        ['Dominican-Republic','*'],
+        ['Ecuador','*'],
+        ['El-Salvador','*'],
+        ['England','*'],
+        ['France','*'],
+        ['Germany','*'],
+        ['Greece','*'],
+        ['Guatemala','*'],
+        ['Haiti','*'],
+        ['Holand-Netherlands','*'],
+        ['Honduras','*'],
+        ['Hong','*'],
+        ['Hungary','*'],
+        ['India','*'],
+        ['Iran','*'],
+        ['Ireland','*'],
+        ['Italy','*'],
+        ['Jamaica','*'],
+        ['Japan','*'],
+        ['Laos','*'],
+        ['Mexico','*'],
+        ['Nicaragua','*'],
+        ['Outlying-US(Guam-USVI-etc)','*'],
+        ['Peru','*'],
+        ['Philippines','*'],
+        ['Poland','*'],
+        ['Portugal','*'],
+        ['Puerto-Rico','*'],
+        ['Scotland','*'],
+        ['South','*'],
+        ['Taiwan','*'],
+        ['Thailand','*'],
+        ['Trinadad&Tobago','*'],
+        ['United-States','*'],
+        ['Vietnam','*'],
+        ['Yugoslavia','*'],
     ],
     'race': [
-        ['Amer-Indian-Eskimo'-'*'],
-        ['Asian-Pac-Islander'-'*'],
-        ['Black'-'*'],
-        ['Other'-'*'],
-        ['White'-'*'],
+        ['Amer-Indian-Eskimo','*'],
+        ['Asian-Pac-Islander','*'],
+        ['Black','*'],
+        ['Other','*'],
+        ['White','*'],
     ],
     'sex': [
-        ['Female'-'*'],
-        ['Male'-'*'],
+        ['Female','*'],
+        ['Male','*'],
     ],
     'education': [
-        ['10th'-'*'],
-        ['11th'-'*'],
-        ['12th'-'*'],
-        ['1st-4th'-'*'],
-        ['5th-6th'-'*'],
-        ['7th-8th'-'*'],
-        ['9th'-'*'],
-        ['Assoc-acdm'-'*'],
-        ['Assoc-voc'-'*'],
-        ['Bachelors'-'*'],
-        ['Doctorate'-'*'],
-        ['HS-grad'-'*'],
-        ['Masters'-'*'],
-        ['Preschool'-'*'],
-        ['Prof-school'-'*'],
-        ['Some-college'-'*'],
+        ['10th','*'],
+        ['11th','*'],
+        ['12th','*'],
+        ['1st-4th','*'],
+        ['5th-6th','*'],
+        ['7th-8th','*'],
+        ['9th','*'],
+        ['Assoc-acdm','*'],
+        ['Assoc-voc','*'],
+        ['Bachelors','*'],
+        ['Doctorate','*'],
+        ['HS-grad','*'],
+        ['Masters','*'],
+        ['Preschool','*'],
+        ['Prof-school','*'],
+        ['Some-college','*'],
     ],
     'workclass': [
         ['Private', '*'],
@@ -338,9 +346,10 @@ def data_tuple_supports_item_sets(rule_items: list, data_tuple: DATA_TUPLE):
             if type(tuple_value) in [float, int] and type(rule_item.value) is str:
                 # Construct number value range
                 op_comparison_1 = '>=' if str(rule_item.value)[0] == '[' else '>'
-                op_comparison_2 = '<=' if str(rule_item.value)[-1] == ']' else '<'
-                l, h = rule_item.value[1: -1].split('-')
-                l, h = float(l.strip()), float(h.strip())       
+                op_comparison_2 = '<=' if str(rule_item.value)[-1] == ']' else '<'                     
+                l = ''.join(rule_item.value[1: -1].split('-')[:-1])                
+                h = rule_item.value[1: -1].split('-')[-1]
+                l, h = float(l.strip()), float(h.strip())
                 step_res = OPERATORS[op_comparison_1](tuple_value, l) and OPERATORS[op_comparison_2](tuple_value, h)
             elif type(tuple_value) is str:   # Handle categorical attributes
                 # Check tuple value in a tree branch in which the rule item value is one of ancestors

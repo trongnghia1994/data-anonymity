@@ -16,7 +16,7 @@ import random
 import cProfile
 import traceback
 
-# sys.stdout = open("log/oka_results.log", "w")
+sys.stdout = open("log/oka_results.log", "w")
 
 DATA_SELECT = 'a'
 TYPE_ALG = 'kmember'
