@@ -3,6 +3,7 @@ import pandas
 import pickle
 import random
 import operator
+import hashlib
 import traceback
 
 
@@ -13,7 +14,7 @@ RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-country',
                          'race', 'education', 'hours-per-week', 'capital-gain', 'workclass']
 QUASI_ATTRIBUTES = RETAINED_DATA_COLUMNS[:6]
 
-MIN_SUP = 0.03
+MIN_SUP = 0.5
 MIN_CONF = 0.5
 DESIRED_K = 5
 
@@ -42,6 +43,7 @@ class RULE:
     support: int = 0
     confidence: float = 0.0
     budget: float = 0.0
+    hash_value: str = ''
 
 
 @dataclass
@@ -151,7 +153,7 @@ def export_dataset(groups: list, output_file_name: str):
         str_concat = ''
         for index, value in t.data.items():
             str_concat += str(value)
-            str_concat += '-'
+            str_concat += ','
 
         str_concat = str_concat[:-1]
         f.write(str_concat + '\n')
@@ -166,16 +168,38 @@ def export_dataset(groups: list, output_file_name: str):
 
 
 # METRICS FOR DATA QUALITY
-def newly_generated_rules_percentage(D):
-    pass
+def cal_rules_diff(rules: list, dataset_length):
+    res = 0
+    min_sup_count = MIN_SUP * dataset_length
+    for rule in rules:
+        rule_loss = False
+        if rule.support < min_sup_count or rule.confidence < MIN_CONF:
+            rule_loss = True
+            res += 1
+
+        pprint_rule(rule)
+        print('Loss?', rule_loss)
 
 
-def no_loss_rules(D):
-    pass
-
-
-def different_rules_percentage(D):
-    pass
+def rules_metrics(r_before: list, r_after: list):
+    print('R AFTER')
+    print(r_after)
+    r_before_hash = [el.hash_value for el in r_before]
+    r_after_hash = [el.hash_value for el in r_after]
+    r_before_hash_set = set(r_before_hash)
+    r_after_hash_set = set(r_after_hash)
+    no_new_rules = len(list(set(r_after_hash_set) - set(r_before_hash_set))) / len(r_before)
+    no_loss_rules = len(list(set(r_before_hash_set) - set(r_after_hash_set))) / len(r_before)
+    no_diff_rules = (len(list(set(r_after_hash_set) - set(r_before_hash_set))) + len(list(set(r_before_hash_set) - set(r_after_hash_set)))) / len(r_before)
+    return no_new_rules, no_loss_rules, no_diff_rules
+    # # Cal number of diff rules
+    # no_diff_rules = 0
+    # intersection = r_before_hash_set.intersection(r_after_hash_set)
+    # for r_hash in intersection:
+    #     r_before = list(filter(lambda r: r.hash_value == r_hash, r_before))[0]
+    #     r_after = list(filter(lambda r: r.hash_value == r_hash, r_after))[0]
+    #     if r_after.support != r_before.support or r_after.confidence != r_before.confidence:
+    #         no_diff_rules += 1
 
 
 def metrics_cavg(groups: list):
@@ -224,7 +248,7 @@ def pick_random_rules(no_rules: int, data_file_path='initial_rules.data'):
 
 
 def pprint_rule(rule: RULE):
-    print('({}) => ({}) - Support: {}, Confidence: {}, Budget: {}, LHS Support: {}'.format(','.join([rule_item.value for rule_item in rule.A]), ','.join([rule_item.value for rule_item in rule.B]), rule.support, rule.confidence, rule.budget, rule.lhs_support))
+    print('({}) => ({}) - Support: {}, Confidence: {}, Budget: {}, LHS Support: {}, Hash: {}'.format(','.join([rule_item.value for rule_item in rule.A]), ','.join([rule_item.value for rule_item in rule.B]), rule.support, rule.confidence, rule.budget, rule.lhs_support, rule.hash_value))
     
 
 def pprint_rule_set(rules: list):
@@ -368,3 +392,16 @@ def data_tuple_supports_item_sets(rule_items: list, data_tuple: DATA_TUPLE):
 
 def data_tuple_supports_a_rule(data_tuple: DATA_TUPLE, rule: RULE):
     return data_tuple_supports_item_sets((rule.A + rule.B), data_tuple)
+
+
+def gen_rule_hash_value(rule: RULE):
+    rule.A.sort(key= lambda el: el.attr)
+    rule.B.sort(key= lambda el: el.attr)
+    rule_str = ''
+    for rule_item in rule.A:
+        rule_str += '{}:{}'.format(rule_item.attr, rule_item.value)
+    rule_str += '=>'
+    for rule_item in rule.B:
+        rule_str += '{}:{}'.format(rule_item.attr, rule_item.value)
+    
+    return hashlib.md5(rule_str.encode('utf-8')).hexdigest()

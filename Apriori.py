@@ -9,7 +9,7 @@ import itertools
 import json
 import pickle
 from itertools import combinations
-from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM, MIN_SUP, MIN_CONF
+from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM, MIN_SUP, MIN_CONF, gen_rule_hash_value
 numeric_columns = ["capital-gain", "hours-per-week"]
 
 
@@ -90,7 +90,7 @@ def apriori(dict_table, support):
     min_sup_count = len(dict_table)*support
 
     #generate frequent-1-itemsets. L[0] holds the 1-itemsets, while C[0] holds the 1-itemsets with their support counts
-    print("Generating Frequent 1-itemsets")
+    # print("Generating Frequent 1-itemsets")
     # generates candidates for 1-itemsets and their counts
     counts_C1 = generate_counts_C1(dict_table)
     pruned_L1, pruned_C1 = prune(counts_C1, min_sup_count)  # pruning against min_sup
@@ -102,7 +102,7 @@ def apriori(dict_table, support):
 
     k = 2
     while(1):
-        print("Generating Frequent " + str(k) + "-itemsets")
+        # print("Generating Frequent " + str(k) + "-itemsets")
         # same as the 'apriori_gen' procedure in the book
         candidate_C = generate_candidate_C(L[k-2], k=k)
         counts_C = generate_counts_C(candidate_C, dict_table)  # find counts
@@ -156,12 +156,10 @@ def gen_rules(item_set, dict_table, min_conf, output_file):
 
                 rule.support = item_set['support']
                 rule.confidence = rule_confidence
-                result.append(rule)
-    
-    result = result[:5]
-    # Write rules as binary to file  
-    with open(output_file, 'wb') as f:
-        pickle.dump(result, f)
+                rule.hash_value = gen_rule_hash_value(rule)
+                result.append(rule)    
+
+    return result
 
 
 def apriori_gen_rules(input_ds=DATA_FILE_PATH):
@@ -197,17 +195,21 @@ def apriori_gen_rules(input_ds=DATA_FILE_PATH):
     output_file=input_ds.split('/')[1].split('.')[0] + '-rules.data'
     L, C = apriori(dict_table, support=MIN_SUP)
     number_of_frequent_itemsets = sum(len(x) for x in L)
-    print("Number of frequent itemsets:")
-    print(number_of_frequent_itemsets)
-    print("Frequent itemsets with support: ")
-    print(json.dumps(C, indent=4))
+    # print("Number of frequent itemsets:")
+    # print(number_of_frequent_itemsets)
+    # print("Frequent itemsets with support: ")
+    # print(json.dumps(C, indent=4))
     confidence = 0.5
     # Process from the itemsets with length = 2
+    all_rules = []
     for item_set_group in C[1:]:
         for item_set in item_set_group:
-            gen_rules(item_set, dict_table, MIN_CONF, output_file)
+            all_rules.extend(gen_rules(item_set, dict_table, MIN_CONF, output_file))
+
+    with open(output_file, 'wb') as f:
+        pickle.dump(all_rules, f)
     
-    return output_file
+    return output_file, all_rules
 
 
 if __name__ == '__main__':    

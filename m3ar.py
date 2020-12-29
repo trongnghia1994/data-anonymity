@@ -9,10 +9,11 @@ import pickle
 from dataclasses import dataclass
 from itertools import combinations
 from ar_mining import cal_supp_conf
+from Apriori import apriori_gen_rules
 from common import *
 
 
-sys.stdout = open("log/m3ar_results.log", "w")
+# sys.stdout = open("log/m3ar_results.log", "w")
 
 
 # Check if an itemset contains quasi attributes
@@ -209,7 +210,10 @@ def do_migration(group_i: GROUP, group_j: GROUP, migrant_tuples_indices: list):
 def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: list):
     remaining_groups = UG + SG
     results = []
+    i = 0
     for group in remaining_groups:
+        if i%100 == 0:
+            print('DEBUG', i)
         if group.index != selected_group.index:
             # Start to apply policies
             factors = apply_policies(R_care, selected_group, group, 'l2r')
@@ -218,7 +222,7 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
                 results.append(factors)
             if factors_reverse[0]:
                 results.append(factors_reverse)
-
+        i += 1
     if len(results) == 0:
         return None
     
@@ -395,24 +399,33 @@ def m3ar_algo(D, R_initial, output_file_name):
     print('=========METRICS=========')
     print('Number of groups:', len(GROUPS))
     print('CAVG:', metrics_cavg(GROUPS))
+    _, md_rules = apriori_gen_rules(output_file_name)
+    # print(md_rules[:10], len(md_rules))
+    print('Number of groups:', len(GROUPS))
+    print('CAVG:', metrics_cavg(GROUPS))
+    no_new_rules, no_loss_rules, no_diff_rules = rules_metrics(R_initial, md_rules)
+    print('Number of new rules:', no_new_rules)
+    print('Number of loss rules:', no_loss_rules)
+    print('Number of diff rules:', no_diff_rules)
 
 
 if __name__ == '__main__':
     if len(sys.argv) > 3:
         data_file_path, initial_rules_path, DESIRED_K = sys.argv[1], sys.argv[2], int(sys.argv[3])
     else:
-        data_file_path = DATA_FILE_PATH
-        initial_rules_path = 'initial_rules.data'
+        data_file_path = 'dataset/adult-min-1000-prep.data'
+        initial_rules_path = 'adult-min-1000-prep-rules-picked.data'
     # A dataset reaches k-anonymity if total risks of all groups equals to 0
     # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
     dataset_length = D.shape[0]
     print('Dataset length', dataset_length)    
+    print('MIN_SUP', MIN_SUP)
     MIN_SUP = MIN_SUP * dataset_length
     R_initial = []
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
-    print('R initial', R_initial)
+    # print('R initial', R_initial)
     output_file_name = 'out_m3ar_k_' + str(DESIRED_K) + '_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
     m3ar_algo(D, R_initial, output_file_name)
 
