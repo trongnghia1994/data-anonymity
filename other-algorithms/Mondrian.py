@@ -150,7 +150,7 @@ pl.scatter(df[column_x], df[column_y])
 pl.show()
 
 def agg_categorical_column(series):
-    return [','.join(set(series))]
+    return ['-'.join(set(series))]
 
 def agg_numerical_column(series):
     return [series.mean()]

@@ -109,7 +109,7 @@ def read_data(flag=0):
         # ignore first line of csv
         if i == 0:
             continue
-        row = line.split(',')
+        row = line.split('-')
         row[2] = row[2][1:-1]
         try:
             userdata[row[2]].append(row)
@@ -128,7 +128,7 @@ def read_data(flag=0):
         # ignore first line of csv
         if i == 0:
             continue
-        row = line.split(',')
+        row = line.split('-')
         row[1] = row[1][1:-1]
         row[2] = row[2][1:-1]
         try:

@@ -29,7 +29,7 @@ ATT_NAMES = RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-cou
 # other categorical attributes only have 2-level generalization hierarchies.
 QI_INDEX = [0, 1, 2, 3, 4, 5]
 IS_CAT = [False, True, True, True, True, True]
-SA_INDEX = -1
+SA_INDEX = [6, 7, 8]
 DATASET_PATH = 'Clustering_based_K_Anon/data/adult-prep.data'
 
 __DEBUG = False
@@ -65,8 +65,9 @@ def read_data(ds_path=DATASET_PATH):
                 except:
                     numeric_dict[i][temp[index]] = 1
             ltemp.append(temp[index])
-        ltemp.append(temp[SA_INDEX])
-        data.append(ltemp)
+        for i in range(len(SA_INDEX)):
+            ltemp.append(temp[SA_INDEX[i]])
+            data.append(ltemp)
     # pickle numeric attributes and get NumRange
     for i in range(QI_num):
         if IS_CAT[i] is False:
@@ -116,9 +117,7 @@ def read_tree_file(treename):
     prefix = 'Clustering_based_K_Anon/data/adult_'
     postfix = ".txt"
     treefile = open(prefix + treename + postfix, 'rU')
-    att_tree['*'] = GenTree('*')
-    if __DEBUG:
-        print "Reading Tree" + treename
+    att_tree['*'] = GenTree('*')    
     for line in treefile:
         # delete \n
         if len(line) <= 1:
@@ -135,8 +134,6 @@ def read_tree_file(treename):
             try:
                 att_tree[t]
             except KeyError:
-                att_tree[t] = GenTree(t, att_tree[temp[i - 1]], isleaf)
-    if __DEBUG:
-        print "Nodes No. = %d" % att_tree['*'].support
+                att_tree[t] = GenTree(t, att_tree[temp[i - 1]], isleaf)    
     treefile.close()
     return att_tree

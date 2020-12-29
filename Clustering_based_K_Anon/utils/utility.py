@@ -39,11 +39,11 @@ def list_to_str(value_list, cmpfun=cmp, sep=';'):
 def get_num_list_from_str(stemp):
     """
     if float(stemp) works, return [stemp]
-    else return, stemp.split(',')
+    else return, stemp.split('-')
 
     """
     try:
         float(stemp)
         return [stemp]
     except ValueError:
-        return stemp.split(',')
+        return stemp.split('-')

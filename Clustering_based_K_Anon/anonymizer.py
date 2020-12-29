@@ -7,13 +7,16 @@ run clustering_based_k_anon with given parameters
 from clustering_based_k_anon import clustering_based_k_anon
 from utils.read_adult_data import read_data as read_adult
 from utils.read_adult_data import read_tree as read_adult_tree
-from utils.read_informs_data import read_data as read_informs
-from utils.read_informs_data import read_tree as read_informs_tree
+# from utils.read_informs_data import read_data as read_informs
+# from utils.read_informs_data import read_tree as read_informs_tree
 import sys
 import copy
 import pdb
 import random
 import cProfile
+import traceback
+
+# sys.stdout = open("log/oka_results.log", "w")
 
 DATA_SELECT = 'a'
 TYPE_ALG = 'kmember'
@@ -23,10 +26,10 @@ __DEBUG = True
 
 def extend_result(val):
     """
-    separated with ',' if it is a list
+    separated with '-' if it is a list
     """
     if isinstance(val, list):
-        return ','.join(val)
+        return '[' + '-'.join(val) + ']'
     return val
 
 
@@ -35,7 +38,7 @@ def write_to_file(result, out_ds_path='data/anonymized.data'):
     write the anonymized result to anonymized.data
     """
     with open(out_ds_path, "w") as output:
-        for r in result:
+        for r in result:            
             output.write(','.join(map(extend_result, r)) + '\n')
 
 
@@ -43,7 +46,7 @@ def get_result_one(att_trees, data, type_alg, k=DEFAULT_K, out_ds_path='data/ano
     "run clustering_based_k_anon for one time, with k=10"
     print "K=%d" % k
     data_back = copy.deepcopy(data)
-    result, eval_result = clustering_based_k_anon(att_trees, data, type_alg, k)
+    result, eval_result = clustering_based_k_anon(att_trees, data, type_alg, k, 6)
     write_to_file(result, out_ds_path)
     data = copy.deepcopy(data_back)
     print "NCP %0.2f" % eval_result[0] + "%"
@@ -166,18 +169,11 @@ if __name__ == '__main__':
         pass
     # read record
     if DATA_SELECT == 'i':
-        print "INFORMS data"
         DATA = read_informs()
         ATT_TREES = read_informs_tree()
     else:
-        print "Adult data"
-        DATA = read_adult(INPUT_DS_PATH)
+        DATA = read_adult(INPUT_DS_PATH)        
         ATT_TREES = read_adult_tree()
-    if __DEBUG:
-        # DATA = DATA[:2000]
-        # print "Test anonymization with %d records" % len(DATA)
-        # print sys.argv
-        pass
     if FLAG == 'k':
         get_result_k(ATT_TREES, DATA, TYPE_ALG)
     elif FLAG == 'qi':
@@ -190,13 +186,13 @@ if __name__ == '__main__':
         if __DEBUG:
             cProfile.run('get_result_one(ATT_TREES, DATA, TYPE_ALG)')
         else:
-            get_result_one(ATT_TREES, DATA, TYPE_ALG)
-    else:
-        sys.stdout = open("log/" + TYPE_ALG + "_results.log", "w")
+            get_result_one(ATT_TREES, DATA, TYPE_ALG)            
+    else:        
         try:
             INPUT_K = int(FLAG)
             get_result_one(ATT_TREES, DATA, TYPE_ALG, INPUT_K, OUTPUT_DS_PATH)
         except ValueError:
+            traceback.print_exc()
             print "Usage: python anonymizer [a | i] [knn | kmember | oka] [k | qi | data| n]"
             print "a: adult dataset, i: INFORMS ataset"
             print "knn: k-nearest neighborhood, kmember: k-member, oka: one time pass k-means"
@@ -206,5 +202,3 @@ if __name__ == '__main__':
             print "example: python anonymizer a knn 5"
             print "example: python anonymizer a kmember k"
         sys.stdout.close()
-    # anonymized dataset is stored in result
-    # print "Finish Cluster based K-Anon!!"

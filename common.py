@@ -126,7 +126,7 @@ def pprint_data_tuple(data_tuple: DATA_TUPLE):
     str_concat = '{}: '.format(data_tuple.index)
     for index, value in data_tuple.data.items():
         str_concat += str(value)
-        str_concat += ','
+        str_concat += '-'
     print(str_concat)
 
 
@@ -150,7 +150,7 @@ def export_dataset(groups: list, output_file_name: str):
         str_concat = ''
         for index, value in t.data.items():
             str_concat += str(value)
-            str_concat += ','
+            str_concat += '-'
 
         str_concat = str_concat[:-1]
         f.write(str_concat + '\n')
@@ -216,7 +216,7 @@ def pick_random_rules(no_rules: int, data_file_path='initial_rules.data'):
 
 
 def pprint_rule(rule: RULE):
-    print('({}) => ({}) - Support: {}, Confidence: {}, Budget: {}, LHS Support: {}'.format(','.join([rule_item.value for rule_item in rule.A]), ','.join([rule_item.value for rule_item in rule.B]), rule.support, rule.confidence, rule.budget, rule.lhs_support))
+    print('({}) => ({}) - Support: {}, Confidence: {}, Budget: {}, LHS Support: {}'.format('-'.join([rule_item.value for rule_item in rule.A]), '-'.join([rule_item.value for rule_item in rule.B]), rule.support, rule.confidence, rule.budget, rule.lhs_support))
     
 
 def pprint_rule_set(rules: list):
@@ -235,76 +235,76 @@ CAT_TREES = {
         ['Married-spouse-absent', 'alone', '*'],
     ],
     'native-country': [
-        ['Cambodia','*'],
-        ['Canada','*'],
-        ['China','*'],
-        ['Columbia','*'],
-        ['Cuba','*'],
-        ['Dominican-Republic','*'],
-        ['Ecuador','*'],
-        ['El-Salvador','*'],
-        ['England','*'],
-        ['France','*'],
-        ['Germany','*'],
-        ['Greece','*'],
-        ['Guatemala','*'],
-        ['Haiti','*'],
-        ['Holand-Netherlands','*'],
-        ['Honduras','*'],
-        ['Hong','*'],
-        ['Hungary','*'],
-        ['India','*'],
-        ['Iran','*'],
-        ['Ireland','*'],
-        ['Italy','*'],
-        ['Jamaica','*'],
-        ['Japan','*'],
-        ['Laos','*'],
-        ['Mexico','*'],
-        ['Nicaragua','*'],
-        ['Outlying-US(Guam-USVI-etc)','*'],
-        ['Peru','*'],
-        ['Philippines','*'],
-        ['Poland','*'],
-        ['Portugal','*'],
-        ['Puerto-Rico','*'],
-        ['Scotland','*'],
-        ['South','*'],
-        ['Taiwan','*'],
-        ['Thailand','*'],
-        ['Trinadad&Tobago','*'],
-        ['United-States','*'],
-        ['Vietnam','*'],
-        ['Yugoslavia','*'],
+        ['Cambodia'-'*'],
+        ['Canada'-'*'],
+        ['China'-'*'],
+        ['Columbia'-'*'],
+        ['Cuba'-'*'],
+        ['Dominican-Republic'-'*'],
+        ['Ecuador'-'*'],
+        ['El-Salvador'-'*'],
+        ['England'-'*'],
+        ['France'-'*'],
+        ['Germany'-'*'],
+        ['Greece'-'*'],
+        ['Guatemala'-'*'],
+        ['Haiti'-'*'],
+        ['Holand-Netherlands'-'*'],
+        ['Honduras'-'*'],
+        ['Hong'-'*'],
+        ['Hungary'-'*'],
+        ['India'-'*'],
+        ['Iran'-'*'],
+        ['Ireland'-'*'],
+        ['Italy'-'*'],
+        ['Jamaica'-'*'],
+        ['Japan'-'*'],
+        ['Laos'-'*'],
+        ['Mexico'-'*'],
+        ['Nicaragua'-'*'],
+        ['Outlying-US(Guam-USVI-etc)'-'*'],
+        ['Peru'-'*'],
+        ['Philippines'-'*'],
+        ['Poland'-'*'],
+        ['Portugal'-'*'],
+        ['Puerto-Rico'-'*'],
+        ['Scotland'-'*'],
+        ['South'-'*'],
+        ['Taiwan'-'*'],
+        ['Thailand'-'*'],
+        ['Trinadad&Tobago'-'*'],
+        ['United-States'-'*'],
+        ['Vietnam'-'*'],
+        ['Yugoslavia'-'*'],
     ],
     'race': [
-        ['Amer-Indian-Eskimo','*'],
-        ['Asian-Pac-Islander','*'],
-        ['Black','*'],
-        ['Other','*'],
-        ['White','*'],
+        ['Amer-Indian-Eskimo'-'*'],
+        ['Asian-Pac-Islander'-'*'],
+        ['Black'-'*'],
+        ['Other'-'*'],
+        ['White'-'*'],
     ],
     'sex': [
-        ['Female','*'],
-        ['Male','*'],
+        ['Female'-'*'],
+        ['Male'-'*'],
     ],
     'education': [
-        ['10th','*'],
-        ['11th','*'],
-        ['12th','*'],
-        ['1st-4th','*'],
-        ['5th-6th','*'],
-        ['7th-8th','*'],
-        ['9th','*'],
-        ['Assoc-acdm','*'],
-        ['Assoc-voc','*'],
-        ['Bachelors','*'],
-        ['Doctorate','*'],
-        ['HS-grad','*'],
-        ['Masters','*'],
-        ['Preschool','*'],
-        ['Prof-school','*'],
-        ['Some-college','*'],
+        ['10th'-'*'],
+        ['11th'-'*'],
+        ['12th'-'*'],
+        ['1st-4th'-'*'],
+        ['5th-6th'-'*'],
+        ['7th-8th'-'*'],
+        ['9th'-'*'],
+        ['Assoc-acdm'-'*'],
+        ['Assoc-voc'-'*'],
+        ['Bachelors'-'*'],
+        ['Doctorate'-'*'],
+        ['HS-grad'-'*'],
+        ['Masters'-'*'],
+        ['Preschool'-'*'],
+        ['Prof-school'-'*'],
+        ['Some-college'-'*'],
     ],
     'workclass': [
         ['Private', '*'],
@@ -332,14 +332,14 @@ def data_tuple_supports_item_sets(rule_items: list, data_tuple: DATA_TUPLE):
         step_res = True
         tuple_value = data_tuple.get(rule_item.attr)
         if rule_item.value == tuple_value:
-            step_res = True
+            step_res = True        
         else:   # Handle Generalization values
             # Handle numerical attributes age 1    rule_item:age (20, 30])
             if type(tuple_value) in [float, int] and type(rule_item.value) is str:
                 # Construct number value range
                 op_comparison_1 = '>=' if str(rule_item.value)[0] == '[' else '>'
                 op_comparison_2 = '<=' if str(rule_item.value)[-1] == ']' else '<'
-                l, h = rule_item.value[1: -1].split(',')
+                l, h = rule_item.value[1: -1].split('-')
                 l, h = float(l.strip()), float(h.strip())       
                 step_res = OPERATORS[op_comparison_1](tuple_value, l) and OPERATORS[op_comparison_2](tuple_value, h)
             elif type(tuple_value) is str:   # Handle categorical attributes

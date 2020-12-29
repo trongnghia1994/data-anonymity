@@ -25,7 +25,7 @@ class NumRange(object):
         self.dict = {}
         for i, v in enumerate(sort_value):
             self.dict[v] = i
-        self.value = sort_value[0] + ',' + sort_value[-1]
+        self.value = sort_value[0] + '-' + sort_value[-1]
 
     def __len__(self):
         """

@@ -10,7 +10,7 @@ MODIFIED_DATA_FILE_PATH = 'modified_ds.data'
 
 
 # INPUT_RULES = [RULE([RULE_ITEM('*', 'sex')], [RULE_ITEM('*', 'race')], support_p=0.0, support=0, lhs_support=0, confidence=0.0)]
-INPUT_RULES = [RULE([RULE_ITEM('(30, 50]', 'age')], [RULE_ITEM('*', 'marital-status')], support_p=0.0, support=0, lhs_support=0, confidence=0.0)]
+INPUT_RULES = [RULE([RULE_ITEM('(30-50]', 'age')], [RULE_ITEM('*', 'marital-status')], support_p=0.0, support=0, lhs_support=0, confidence=0.0)]
 
 
 def cal_supp_conf(data_file_path, columns, input_rules):
@@ -48,7 +48,7 @@ def cal_supp_conf(data_file_path, columns, input_rules):
 
 if __name__ == '__main__':
     INPUT_RULES = [
-        RULE(A=[RULE_ITEM(value='(-0.1, 2523.6]', attr='capital-gain'), RULE_ITEM(value='HS-grad', attr='education'), RULE_ITEM(value='(30.4, 40.2]', attr='hours-per-week'), RULE_ITEM(value='Married-civ-spouse', attr='marital-status'), RULE_ITEM(value='White', attr='race')], B=[RULE_ITEM(value='United-States', attr='native-country'), RULE_ITEM(value='Male', attr='sex'), RULE_ITEM(value='Private', attr='workclass')], lhs_support=0, support_p=0.0, support=36, confidence=0.5538461538461539, budget=0),
+        RULE(A=[RULE_ITEM(value='(-0.1-2523.6]', attr='capital-gain'), RULE_ITEM(value='HS-grad', attr='education'), RULE_ITEM(value='(30.4, 40.2]', attr='hours-per-week'), RULE_ITEM(value='Married-civ-spouse', attr='marital-status'), RULE_ITEM(value='White', attr='race')], B=[RULE_ITEM(value='United-States', attr='native-country'), RULE_ITEM(value='Male', attr='sex'), RULE_ITEM(value='Private', attr='workclass')], lhs_support=0, support_p=0.0, support=36, confidence=0.5538461538461539, budget=0),
         RULE(A=[RULE_ITEM(value='HS-grad', attr='education'), RULE_ITEM(value='(30.4, 40.2]', attr='hours-per-week'), RULE_ITEM(value='Married-civ-spouse', attr='marital-status'), RULE_ITEM(value='Male', attr='sex')], B=[RULE_ITEM(value='United-States', attr='native-country'), RULE_ITEM(value='White', attr='race'), RULE_ITEM(value='(-0.1, 2523.6]', attr='capital-gain'), RULE_ITEM(value='Private', attr='workclass')], lhs_support=0, support_p=0.0, support=36, confidence=0.5, budget=0),
         RULE(A=[RULE_ITEM(value='HS-grad', attr='education'), RULE_ITEM(value='(30.4, 40.2]', attr='hours-per-week'), RULE_ITEM(value='Married-civ-spouse', attr='marital-status'), RULE_ITEM(value='Private', attr='workclass')], B=[RULE_ITEM(value='United-States', attr='native-country'), RULE_ITEM(value='White', attr='race'), RULE_ITEM(value='Male', attr='sex'), RULE_ITEM(value='(-0.1, 2523.6]', attr='capital-gain')], lhs_support=0, support_p=0.0, support=36, confidence=0.5806451612903226, budget=0),
     ]

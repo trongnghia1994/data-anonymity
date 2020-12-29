@@ -161,7 +161,7 @@ def NCP(record):
             try:
                 float(record[i])
             except ValueError:
-                temp = record[i].split(',')
+                temp = record[i].split('-')
                 width = float(temp[1]) - float(temp[0])
         else:
             width = len(ATT_TREES[i][record[i]]) * 1.0
@@ -206,12 +206,12 @@ def generalization(record1, record2):
             split_number = []
             split_number.extend(get_num_list_from_str(record1[i]))
             split_number.extend(get_num_list_from_str(record2[i]))
-            split_number = list(set(split_number))
+            split_number = list(set(split_number))            
             if len(split_number) == 1:
                 gen.append(split_number[0])
-            else:
+            else:                
                 split_number.sort(cmp=cmp_str)
-                gen.append(split_number[0] + ',' + split_number[-1])
+                gen.append(split_number[0] + '-' + split_number[-1])
         else:
             gen.append(get_LCA(i, record1[i], record2[i]))
     return gen
@@ -391,13 +391,10 @@ def clustering_oka(data, k=25):
         record = data[index]
         can_clusters.append(Cluster([record], record))
     data = [t for i, t in enumerate(data[:]) if i not in set(seed_index)]
-    # pdb.set_trace()
     while len(data) > 0:
-        print('data', len(data))
         record = data.pop()        
         index = find_best_cluster_iloss(record, can_clusters)
         can_clusters[index].add_record(record)    
-    # pdb.set_trace()
     residual = []
     for cluster in can_clusters:
         if len(cluster) < k:
@@ -431,7 +428,7 @@ def init(att_trees, data, QI_num=-1):
     LCA_CACHE = []
     NCP_CACHE = {}
     if QI_num <= 0:
-        QI_LEN = len(data[0]) - 1
+        QI_LEN = len(data[0]) - 3
     else:
         QI_LEN = QI_num
     for i in range(QI_LEN):
@@ -469,12 +466,11 @@ def clustering_based_k_anon(att_trees, data, type_alg='knn', k=10, QI_num=-1):
     for cluster in clusters:
         final_result = []
         for i in range(len(cluster)):
-            final_result.append(cluster.gen_result + [cluster.member[i][-1]])
+            final_result.append(cluster.gen_result + cluster.member[i][-3:])        
         result.extend(final_result)
         ncp += cluster.information_loss
     ncp /= LEN_DATA
     ncp /= QI_LEN
     ncp *= 100
-    if __DEBUG:
-        print "NCP=", ncp
+    print "NCP=", ncp
     return (result, (ncp, rtime))
