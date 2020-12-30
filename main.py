@@ -4,7 +4,7 @@ from preprocess import preprocess
 from Apriori import apriori_gen_rules
 import pickle, subprocess, time, pandas
 
-input_ds = 'dataset/adult-min-1000.data'
+input_ds = 'dataset/adult.data'
 processed_ds = preprocess(input_ds)
 rules_data_file, R_initial = apriori_gen_rules(processed_ds)
 print('Length of R_initial:', len(R_initial))
@@ -27,10 +27,10 @@ for k in K_SET:
     commands = [
         # run_m3ar_algo,
         run_modified_algo,
-        run_oka_algo,
+        # run_oka_algo,
     ]
     print(commands)
     for cmd in commands:
-        subprocess.run(cmd)
+        subprocess.Popen(cmd)
 
     time.sleep(1)

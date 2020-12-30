@@ -215,10 +215,12 @@ def metrics_cavg(groups: list):
 
 
 def metrics_cavg_raw(groups: list):
-    total_size = 0
+    total_size, no_unsafe_groups = 0, 0
     for _, group in groups:
         total_size += len(group)
-    return total_size / len(groups), total_size
+        if len(group) < DESIRED_K:
+            no_unsafe_groups += 1
+    return total_size / len(groups), total_size, no_unsafe_groups
 
 
 def remove_group(group: GROUP, group_list: list):
@@ -379,8 +381,9 @@ def rule_contains_attr_val(rule: RULE, attr_name, attr_value):
 def move_data_tuple_affect_a_rule(data_tuple: DATA_TUPLE, rule: RULE, group_j: GROUP):
     group_j_first_tuple = group_first_tuple(group_j)
     # Loop through quasi attributes of the data tuple then compare with the destination group (group j)'s first tuple
-    for attr in QUASI_ATTRIBUTES:
-        if group_j_first_tuple.data.get(attr) != data_tuple.data.get(attr):
+    for index, attr in enumerate(QUASI_ATTRIBUTES):
+        dst_group_quasi_attr_value = group_j_first_tuple.data.get(attr) if group_j_first_tuple else group_j.quasi_attributes_values[index]
+        if dst_group_quasi_attr_value != data_tuple.data.get(attr):
             if rule_contains_attr_val(rule, attr, data_tuple.data.get(attr)):
                 return True
 
@@ -461,4 +464,3 @@ def construct_r_affected_by_a_migration(R_care: list, T: list, group_j: GROUP):
                 R_result.append(rule)
 
     return R_result
-    

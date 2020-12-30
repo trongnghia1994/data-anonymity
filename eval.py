@@ -40,10 +40,12 @@ def eval_results(R_initial, groups, output_file_name, start_time, other_algo=Fal
     print('=========METRICS=========')
     print('Number of groups:', len(groups))
     if other_algo:
-        cavg_raw, total_no_tuples = metrics_cavg_raw(groups)    
+        cavg_raw, total_no_tuples, no_unsafe_groups = metrics_cavg_raw(groups)    
+        print('Number of unsafe groups:', no_unsafe_groups)
         print('Number of tuples:', total_no_tuples)
         print('CAVG:', cavg_raw)
     else:
+        print('Number of unsafe groups:', sum(1 for gr in groups if 0 < group_length(gr) < DESIRED_K))
         print('Number of tuples:', sum(group_length(gr) for gr in groups))
         print('CAVG:', metrics_cavg(groups))    
     no_existing_rules = no_existing_rules / len(R_initial)

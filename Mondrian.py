@@ -1,37 +1,20 @@
+from common import RETAINED_DATA_COLUMNS
 import pandas as pd
 import matplotlib.pylab as pl
 import matplotlib.patches as patches
  
-names = (
-    'age',
-    'workclass', 
-    'fnlwgt', 
-    'education',
-    'education-num',
-    'marital-status',
-    'occupation',
-    'relationship',
-    'race',
-    'sex',
-    'capital-gain',
-    'capital-loss',
-    'hours-per-week',
-    'native-country',
-    'income',
-)
+names = RETAINED_DATA_COLUMNS
 
-categorical = set((
-    'workclass',
-    'education',
-    'marital-status',
-    'occupation',
-    'relationship',
+categorical = set((            
     'sex',
+    'marital-status',
     'native-country',
     'race',
-    'income',
+    'education',
+    'workclass',
 ))
-df = pd.read_csv("dataset/adult-prep.data", sep=", ", header=None, names=names, index_col=False, engine='python')
+
+df = pd.read_csv("dataset/adult-prep.data", header=None, names=names, index_col=False, engine='python')
 
 print(df.head())
 
@@ -87,8 +70,8 @@ def partition_dataset(df, feature_columns, sensitive_column, scale, is_valid):
             finished_partitions.append(partition)
     return finished_partitions
 
-feature_columns = ['age', 'education-num']
-sensitive_column = 'income'
+feature_columns = ['age', 'education']
+sensitive_column = 'capital-gain'
 finished_partitions = partition_dataset(df, feature_columns, sensitive_column, full_spans, is_k_anonymous)
 
 print(len(finished_partitions))
@@ -143,11 +126,11 @@ def plot_rects(df, ax, rects, column_x, column_y, edgecolor='black', facecolor='
     ax.set_xlabel(column_x)
     ax.set_ylabel(column_y)
 
-pl.figure(figsize=(20,20))
-ax = pl.subplot(111)
-plot_rects(df, ax, rects, column_x, column_y, facecolor='r')
-pl.scatter(df[column_x], df[column_y])
-pl.show()
+# pl.figure(figsize=(20,20))
+# ax = pl.subplot(111)
+# plot_rects(df, ax, rects, column_x, column_y, facecolor='r')
+# pl.scatter(df[column_x], df[column_y])
+# pl.show()
 
 def agg_categorical_column(series):
     return ['-'.join(set(series))]
@@ -170,6 +153,7 @@ def build_anonymized_dataset(df, partitions, feature_columns, sensitive_column, 
             break
         grouped_columns = df.loc[partition].agg(aggregations, squeeze=False)
         sensitive_counts = df.loc[partition].groupby(sensitive_column).agg({sensitive_column : 'count'})
+        print(grouped_columns)
         values = grouped_columns.iloc[0].to_dict()
         for sensitive_value, count in sensitive_counts[sensitive_column].items():
             if count == 0:

@@ -162,7 +162,7 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
                 results.append(factors_reverse)
         # i += 1
     print('RUN TIME TO FIND A GROUP TO MIGRATE: {}'.format(time.time() - st))
-    if len(results) == 0:
+    if len(results) == 0:   # There is no choice to move
         return None
     
     # Construct pandas DataFrame results
@@ -189,18 +189,19 @@ def find_group_to_move_dispersing(R_care: list, t: DATA_TUPLE, SG: list):
     return result
 
 
-def do_disperse_migration(R_care: list, src_group: GROUP, data_tuple: DATA_TUPLE, dst_group: GROUP, is_return=False):
+def do_disperse_migration(R_care: list, src_group: GROUP, data_tuple: DATA_TUPLE, dst_group: GROUP, is_return=False):    
+    convert_quasi_attributes(data_tuple, dst_group)
     R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], dst_group)
-    if not is_return:        
+    if not is_return:
+        src_group.origin_tuples.remove(data_tuple)
+        dst_group.received_tuples.append(data_tuple)
         for rule in R_affected:
             rule.budget -= 1
     else:
+        src_group.received_tuples.remove(data_tuple)
+        dst_group.origin_tuples.append(data_tuple)
         for rule in R_affected:
             rule.budget += 1
-
-    src_group.origin_tuples.remove(data_tuple)
-    convert_quasi_attributes(data_tuple, dst_group)
-    dst_group.received_tuples.append(data_tuple)
 
 
 def disperse(R_care: list, um_group: GROUP, GROUPS: list, SG: list, UM: list):
@@ -325,7 +326,7 @@ def m3ar_algo(D, R_initial, output_file_name):
 
 
 if __name__ == '__main__':
-    # sys.stdout = open("log/m3ar_results.log", "w")
+    sys.stdout = open("log/m3ar_results.log", "w")
     if len(sys.argv) > 3:
         data_file_path, initial_rules_path, DESIRED_K = sys.argv[1], sys.argv[2], int(sys.argv[3])
     else:
