@@ -8,22 +8,8 @@ import sys
 import pickle
 from dataclasses import dataclass
 from itertools import combinations
-from ar_mining import cal_supp_conf
-from Apriori import apriori_gen_rules
 from common import *
-
-
-# sys.stdout = open("log/m3ar_results.log", "w")
-
-
-# Check if an itemset contains quasi attributes
-def item_set_contains_quasi_attr(item_set: list):
-    return any(rule_item.attr in QUASI_ATTRIBUTES for rule_item in item_set)
-
-
-# Check if an itemset contains quasi attributes
-def rule_contains_quasi_attr(rule: RULE):
-    return any(item_set_contains_quasi_attr(item_set) for item_set in [rule.A, rule.B])
+from eval import eval_results
 
 
 def group_risk(a_group):
@@ -52,11 +38,6 @@ def calc_risk_reduction(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int):
     group_j_length_after = group_length(group_j) + no_migrant_tuples
     group_j_risk_after = 0 if group_j_length_after >= DESIRED_K else 2*DESIRED_K - group_j_length_after
     return risk_before - (group_i_risk_after + group_j_risk_after)
-
-
-# Construct the rule set we care (relating to quasi attributes)
-def construct_r_care(R_initial: list):
-    return [rule for rule in R_initial if rule_contains_quasi_attr(rule)]
 
 
 def rule_contains_attr_val(rule: RULE, attr_name, attr_value):
@@ -381,35 +362,13 @@ def m3ar_algo(D, R_initial, output_file_name):
     print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
     print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
     print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
-    print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))
-    total_time = time.time() - start_time
-    print('RUN TIME: {} seconds'.format(total_time))
-    print('=========FINAL GROUPS=========')
-    pprint_groups(GROUPS)
-    output_file_name = 'output/' + output_file_name
-    export_dataset(GROUPS, output_file_name)
-    print('==ORIGIN RULES==')
-    for rule in R_care:
-        pprint_rule(rule)
-    # Recalculate support and confidence of rules
-    print('==RULES MINED ON MODIFIED DATASET==')
-    modified_R_care = cal_supp_conf(output_file_name, RETAINED_DATA_COLUMNS, R_care)
-    for rule in modified_R_care:
-        pprint_rule(rule)
-    print('=========METRICS=========')
-    print('Number of groups:', len(GROUPS))
-    print('CAVG:', metrics_cavg(GROUPS))
-    _, md_rules = apriori_gen_rules(output_file_name)
-    # print(md_rules[:10], len(md_rules))
-    print('Number of groups:', len(GROUPS))
-    print('CAVG:', metrics_cavg(GROUPS))
-    no_new_rules, no_loss_rules, no_diff_rules = rules_metrics(R_initial, md_rules)
-    print('Number of new rules:', no_new_rules)
-    print('Number of loss rules:', no_loss_rules)
-    print('Number of diff rules:', no_diff_rules)
+    print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))    
+
+    eval_results(R_initial, GROUPS, output_file_name, start_time)
 
 
 if __name__ == '__main__':
+    # sys.stdout = open("log/m3ar_results.log", "w")
     if len(sys.argv) > 3:
         data_file_path, initial_rules_path, DESIRED_K = sys.argv[1], sys.argv[2], int(sys.argv[3])
     else:

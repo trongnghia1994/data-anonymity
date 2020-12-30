@@ -5,28 +5,18 @@ import random
 import time
 import traceback
 import sys
+import copy
 import pickle
 from dataclasses import dataclass
 from itertools import combinations
-from ar_mining import cal_supp_conf
-from Apriori import apriori_gen_rules
 from common import *
+from eval import eval_results
 
 
 sys.stdout = open("log/modified_algo_results.log", "w")
 
 
 OUTPUT_DATASET_PATH = 'modified_ds.data'
-
-
-# Check if an itemset contains quasi attributes
-def item_set_contains_quasi_attr(item_set: list):
-    return any(rule_item.attr in QUASI_ATTRIBUTES for rule_item in item_set)
-
-
-# Check if an itemset contains quasi attributes
-def rule_contains_quasi_attr(rule: RULE):
-    return any(item_set_contains_quasi_attr(item_set) for item_set in [rule.A, rule.B])
 
 
 def group_risk(a_group):
@@ -55,11 +45,6 @@ def calc_risk_reduction(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int):
     group_j_length_after = group_length(group_j) + no_migrant_tuples
     group_j_risk_after = 0 if group_j_length_after >= DESIRED_K else 2*DESIRED_K - group_j_length_after
     return risk_before - (group_i_risk_after + group_j_risk_after)
-
-
-# Construct the rule set we care (relating to quasi attributes)
-def construct_r_care(R_initial: list):
-    return [rule for rule in R_initial if rule_contains_quasi_attr(rule)]
 
 
 def rule_contains_attr_val(rule: RULE, attr_name, attr_value):
@@ -282,8 +267,9 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
     R_care = construct_r_care(R_initial)
     for r in R_care:
         r.budget = rule_budget(r)
-    print('R care')
-    pprint_rule_set(R_care)
+    print('R care length=', len(R_care))
+    # pprint_rule_set(R_care)
+
     print('===============================================================================')    
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
     GROUPS, SG, UG = build_groups(D)
@@ -349,7 +335,6 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
 
                 SelG = None
 
-    total_time = time.time() - start_time
     print('TOTAL LOOPS: {}'.format(loop_iteration))
     print('AFTER STAGE 1')
     print('TOTAL NUMBER OF SAFE GROUPS: {}'.format(len([group for group in GROUPS if group_length(group) >= DESIRED_K])))
@@ -455,34 +440,8 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
     # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
     print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
     # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
-    print('RUN TIME: {} seconds'.format(total_time))
-    print('=========FINAL GROUPS=========')
-    pprint_groups(GROUPS)
-    output_file_name = 'output/' + output_file_name
-    export_dataset(GROUPS, output_file_name)
-    print('==ORIGIN RULES==')
-    for rule in R_care:
-        pprint_rule(rule)
-    # Recalculate support and confidence of rules
-    print('==RULES MINED ON MODIFIED DATASET==')
-    modified_R_care = cal_supp_conf(output_file_name, RETAINED_DATA_COLUMNS, R_care)
-    no_existing_rules = 0
-    for rule in modified_R_care:
-        pprint_rule(rule)
-        if rule.support >= MIN_SUP and rule.confidence >= MIN_CONF:
-            no_existing_rules += 1
-    print('=========METRICS=========')
-    print('Number of groups:', len(GROUPS))
-    print('Number of existing rules: {}/{}'.format(no_existing_rules, len(R_initial)))
-    print('CAVG:', metrics_cavg(GROUPS))
-    _, md_rules = apriori_gen_rules(output_file_name)
-    # print(md_rules[:10], len(md_rules))
-    print('Number of groups:', len(GROUPS))
-    print('CAVG:', metrics_cavg(GROUPS))
-    no_new_rules, no_loss_rules, no_diff_rules = rules_metrics(R_initial, md_rules)
-    print('Number of new rules:', no_new_rules)
-    print('Number of loss rules:', no_loss_rules)
-    print('Number of diff rules:', no_diff_rules)
+
+    eval_results(R_initial, GROUPS, output_file_name, start_time)
 
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@ import pickle
 import random
 import operator
 import hashlib
+import copy
 import traceback
 
 
@@ -181,9 +182,7 @@ def cal_rules_diff(rules: list, dataset_length):
         print('Loss?', rule_loss)
 
 
-def rules_metrics(r_before: list, r_after: list):
-    print('R AFTER')
-    print(r_after)
+def rules_metrics(r_before: list, r_after: list):    
     r_before_hash = [el.hash_value for el in r_before]
     r_after_hash = [el.hash_value for el in r_after]
     r_before_hash_set = set(r_before_hash)
@@ -210,7 +209,7 @@ def metrics_cavg_raw(groups: list):
     total_size = 0
     for _, group in groups:
         total_size += len(group)
-    return total_size / len(groups)
+    return total_size / len(groups), total_size
 
 
 def remove_group(group: GROUP, group_list: list):
@@ -405,3 +404,19 @@ def gen_rule_hash_value(rule: RULE):
         rule_str += '{}:{}'.format(rule_item.attr, rule_item.value)
     
     return hashlib.md5(rule_str.encode('utf-8')).hexdigest()
+
+
+# Check if an itemset contains quasi attributes
+def item_set_contains_quasi_attr(item_set: list):
+    return any(rule_item.attr in QUASI_ATTRIBUTES for rule_item in item_set)
+
+
+# Check if an itemset contains quasi attributes
+def rule_contains_quasi_attr(rule: RULE):
+    return any(item_set_contains_quasi_attr(item_set) for item_set in [rule.A, rule.B])
+
+
+# Construct the rule set we care (relating to quasi attributes)
+def construct_r_care(R_initial: list):
+    R_initial_copy = copy.deepcopy(R_initial)
+    return [rule for rule in R_initial_copy if rule_contains_quasi_attr(rule)]

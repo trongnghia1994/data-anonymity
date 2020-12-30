@@ -26,9 +26,9 @@ for k in K_SET:
     run_oka_algo = ['python', 'oka.py', abs_data_path, oka_abs_output_path, picked_rules_file, str(k)]
 
     commands = [
-        run_m3ar_algo,
+        # run_m3ar_algo,
         # run_modified_algo,
-        # run_oka_algo,
+        run_oka_algo,
     ]
     print(commands)
     for cmd in commands:

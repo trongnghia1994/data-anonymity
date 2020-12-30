@@ -47,6 +47,7 @@ def read_data(ds_path=DATASET_PATH):
     # oder categorical attributes in intuitive order
     # here, we use the appear number
     data_file = open(ds_path, 'rU')
+    count = 0
     for line in data_file:
         line = line.strip()
         # remove empty and incomplete lines
@@ -67,7 +68,9 @@ def read_data(ds_path=DATASET_PATH):
             ltemp.append(temp[index])
         for i in range(len(SA_INDEX)):
             ltemp.append(temp[SA_INDEX[i]])
-            data.append(ltemp)
+
+        data.append(ltemp)
+        count += 1
     # pickle numeric attributes and get NumRange
     for i in range(QI_num):
         if IS_CAT[i] is False:

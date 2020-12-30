@@ -199,7 +199,6 @@ def apriori_gen_rules(input_ds=DATA_FILE_PATH):
     # print(number_of_frequent_itemsets)
     # print("Frequent itemsets with support: ")
     # print(json.dumps(C, indent=4))
-    confidence = 0.5
     # Process from the itemsets with length = 2
     all_rules = []
     for item_set_group in C[1:]:
