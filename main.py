@@ -22,12 +22,11 @@ for k in K_SET:
     run_modified_algo = ['python', 'modified_m3ar.py', abs_data_path, picked_rules_file, str(k)]
     oka_abs_output_path = 'D:/data_anonymity/output/' + 'out_oka_' + 'k_' + str(k) + '_' + processed_ds.split('/')[-1]
     print(abs_data_path, oka_abs_output_path)
-    # run_oka_algo = ['C:/Python27/python.exe', 'Clustering_based_K_Anon/anonymizer.py', 'a', 'oka', str(k), abs_data_path, oka_abs_output_path]
     run_oka_algo = ['python', 'oka.py', abs_data_path, oka_abs_output_path, picked_rules_file, str(k)]
 
     commands = [
         # run_m3ar_algo,
-        # run_modified_algo,
+        run_modified_algo,
         run_oka_algo,
     ]
     print(commands)

@@ -20,15 +20,6 @@ def group_risk(a_group):
         return 2*DESIRED_K - group_len
 
 
-def rule_budget(a_rule):
-    '''Budget of the rule A -> B where A, B are sets of attribute values. The smaller the budget the more risk it will be lost'''    
-    if not item_set_contains_quasi_attr(a_rule.B):
-        # If the right hand side of the rule does not contain any quasi attribute
-        return min(a_rule.support - MIN_SUP, int(a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence*(1 - MIN_CONF)))
-    else:
-        return min(a_rule.support - MIN_SUP, int(a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence))
-
-
 def calc_risk_reduction(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int):
     '''Calculate the risk reduction in case performing 
     a migration operation of <no_migrant_tuples> from group i to group j'''
@@ -40,45 +31,9 @@ def calc_risk_reduction(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int):
     return risk_before - (group_i_risk_after + group_j_risk_after)
 
 
-def rule_contains_attr_val(rule: RULE, attr_name, attr_value):
-    '''Check if a rule contains the attribute value indicated by attr_name, attr_value'''
-    rule_items = rule.A + rule.B
-    for rule_item in rule_items:
-        if rule_item.attr == attr_name and rule_item.value != attr_value:
-            return True
-
-    return True
-
-
-def move_data_tuple_affect_a_rule(data_tuple: DATA_TUPLE, rule: RULE, group_j: GROUP):
-    # if group_length(group_j) == 0:
-    #     return False
-
-    group_j_first_tuple = group_first_tuple(group_j)
-    # Loop through quasi attributes of the data tuple then compare with the destination group (group j)'s first tuple
-    for attr in QUASI_ATTRIBUTES:
-        if group_j_first_tuple.data.get(attr) != data_tuple.data.get(attr):
-            if rule_contains_attr_val(rule, attr, data_tuple.data.get(attr)):
-                return True
-
-    return False
-
-
-def construct_r_affected_by_a_migration(R_care: list, T: list, group_j: GROUP):
-    '''Construct the rule set affected 
-    by a migration operation of tuples T from group i to group j'''
-    R_result = []    
-    for rule in R_care:
-        for data_tuple in T:
-            if move_data_tuple_affect_a_rule(data_tuple, rule, group_j):
-                R_result.append(rule)
-
-    return R_result
-
-
 # POLICIES
 '''
-1. A k-unsafe group once has received tuple(s), it can only
+POLICY 1. A k-unsafe group once has received tuple(s), it can only
 continue receiving tuple(s); otherwise, as its tuple(s) migrate
 to another group, it can only continue giving its tuple(s) to
 other groups. The policy does not apply to k-safe groups. ONLY for k-unsafe groups
@@ -109,7 +64,7 @@ def choose_group_tuples_for_migration(R_care: list, group_i: GROUP, no_tuples: i
     return None, []
 
 '''
-2. g(i)⎯T->g(j) and ∀t∈T → (∀r ∈ R(t),g(i)->g(j)->Budget(r) > 0)
+POLICY 2. g(i)⎯T->g(j) and ∀t∈T → (∀r ∈ R(t),g(i)->g(j)->Budget(r) > 0)
 If migrating tuples T from group i to group j, all rules affected must have positive budgets
 '''
 
@@ -127,7 +82,7 @@ def budgets_of_rules_affected_by_migrating_a_tuple(R_care, t: DATA_TUPLE, group_
 
 
 '''
-3. Calculate number of migrant tuples in a migration operation
+POLICY 3. Calculate number of migrant tuples in a migration operation
 '''
 
 
@@ -191,10 +146,12 @@ def do_migration(group_i: GROUP, group_j: GROUP, migrant_tuples_indices: list):
 def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: list):
     remaining_groups = UG + SG
     results = []
-    i = 0
+    # i = 0
+    print('FIND A GROUP TO PERFORM MIGRATE IN {} REMAINING GROUPS'.format(len(remaining_groups)))
+    st = time.time()
     for group in remaining_groups:
-        if i%100 == 0:
-            print('DEBUG', i)
+        # if i % 200 == 0:
+        #     print('DEBUG', i)
         if group.index != selected_group.index:
             # Start to apply policies
             factors = apply_policies(R_care, selected_group, group, 'l2r')
@@ -203,7 +160,8 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
                 results.append(factors)
             if factors_reverse[0]:
                 results.append(factors_reverse)
-        i += 1
+        # i += 1
+    print('RUN TIME TO FIND A GROUP TO MIGRATE: {}'.format(time.time() - st))
     if len(results) == 0:
         return None
     
@@ -282,12 +240,11 @@ def m3ar_algo(D, R_initial, output_file_name):
     print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in UG)))
     UM = []  # Set of groups that cannot migrate member with other groups
     print('K =', DESIRED_K)
-    print('Number of safe groups and unsafe groups:', len(SG), len(UG))
+    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS:', len(UG), len(SG))
     R_care = construct_r_care(R_initial)  # List of cared rules
     for r in R_care:
         r.budget = rule_budget(r)
-    print('R care')
-    pprint_rule_set(R_care)
+    print('LENGTH OF R_care', len(R_care))
     print('===============================================================================')
     SelG = None
     loop_iteration = 0

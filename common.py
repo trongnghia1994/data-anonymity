@@ -126,6 +126,15 @@ def convert_quasi_attributes(data_tuple: DATA_TUPLE, dst_group: GROUP):
         data_tuple.data.update(dst_group.quasi_attributes_values)        
 
 
+def rule_budget(a_rule):
+    '''Budget of the rule A -> B where A, B are sets of attribute values. The smaller the budget the more risk it will be lost'''    
+    if not item_set_contains_quasi_attr(a_rule.B):
+        # If the right hand side of the rule does not contain any quasi attribute
+        return min(a_rule.support - MIN_SUP, int(a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence*(1 - MIN_CONF)))
+    else:
+        return min(a_rule.support - MIN_SUP, int(a_rule.support*(a_rule.confidence - MIN_CONF) / a_rule.confidence))
+
+
 def pprint_data_tuple(data_tuple: DATA_TUPLE):
     str_concat = '{}: '.format(data_tuple.index)
     for index, value in data_tuple.data.items():
@@ -357,6 +366,26 @@ OPERATORS = {
     '<': operator.lt,
 }
 
+def rule_contains_attr_val(rule: RULE, attr_name, attr_value):
+    '''Check if a rule contains the attribute value indicated by attr_name, attr_value'''
+    rule_items = rule.A + rule.B
+    for rule_item in rule_items:
+        if rule_item.attr == attr_name and rule_item.value != attr_value:
+            return False
+
+    return True
+
+
+def move_data_tuple_affect_a_rule(data_tuple: DATA_TUPLE, rule: RULE, group_j: GROUP):
+    group_j_first_tuple = group_first_tuple(group_j)
+    # Loop through quasi attributes of the data tuple then compare with the destination group (group j)'s first tuple
+    for attr in QUASI_ATTRIBUTES:
+        if group_j_first_tuple.data.get(attr) != data_tuple.data.get(attr):
+            if rule_contains_attr_val(rule, attr, data_tuple.data.get(attr)):
+                return True
+
+    return False
+
 
 def data_tuple_supports_item_sets(rule_items: list, data_tuple: DATA_TUPLE):
     for rule_item in rule_items:
@@ -420,3 +449,16 @@ def rule_contains_quasi_attr(rule: RULE):
 def construct_r_care(R_initial: list):
     R_initial_copy = copy.deepcopy(R_initial)
     return [rule for rule in R_initial_copy if rule_contains_quasi_attr(rule)]
+
+
+def construct_r_affected_by_a_migration(R_care: list, T: list, group_j: GROUP):
+    '''Construct the rule set affected 
+    by a migration operation of tuples T from group i to group j'''
+    R_result = []    
+    for rule in R_care:
+        for data_tuple in T:
+            if move_data_tuple_affect_a_rule(data_tuple, rule, group_j):
+                R_result.append(rule)
+
+    return R_result
+    
