@@ -16,8 +16,6 @@ import random
 import cProfile
 import traceback
 
-sys.stdout = open("log/oka_results.log", "w")
-
 DATA_SELECT = 'a'
 TYPE_ALG = 'kmember'
 DEFAULT_K = 10
@@ -165,6 +163,7 @@ if __name__ == '__main__':
         FLAG = sys.argv[3]
         INPUT_DS_PATH = sys.argv[4]
         OUTPUT_DS_PATH = sys.argv[5]
+        LOG_TO_FILE = sys.argv[6]
     except IndexError:
         pass
     # read record
@@ -187,9 +186,11 @@ if __name__ == '__main__':
             cProfile.run('get_result_one(ATT_TREES, DATA, TYPE_ALG)')
         else:
             get_result_one(ATT_TREES, DATA, TYPE_ALG)            
-    else:        
+    else:            
         try:
             INPUT_K = int(FLAG)
+            if LOG_TO_FILE == '1':
+                sys.stdout = open("log/oka_results_k_" + str(INPUT_K) + ".log", "w")
             get_result_one(ATT_TREES, DATA, TYPE_ALG, INPUT_K, OUTPUT_DS_PATH)
         except ValueError:
             traceback.print_exc()

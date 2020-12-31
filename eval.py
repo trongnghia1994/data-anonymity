@@ -4,7 +4,7 @@ from ar_mining import cal_supp_conf
 from Apriori import apriori_gen_rules
 
 
-def eval_results(R_initial, groups, output_file_name, start_time, other_algo=False):
+def eval_results(R_initial, groups, output_file_name, start_time, other_algo=False, k=DESIRED_K):
     total_time = time.time() - start_time
     print('================================================================================')
     print('=========FINAL GROUPS=========')
@@ -43,7 +43,7 @@ def eval_results(R_initial, groups, output_file_name, start_time, other_algo=Fal
         print('Number of tuples:', total_no_tuples)
         print('CAVG:', cavg_raw)
     else:
-        print('Number of unsafe groups:', sum(1 for gr in groups if 0 < group_length(gr) < DESIRED_K))
+        print('Number of unsafe groups:', sum(1 for gr in groups if 0 < group_length(gr) < k))
         print('Number of tuples:', sum(group_length(gr) for gr in groups))
         print('CAVG:', metrics_cavg(groups))    
     no_existing_rules = no_existing_rules / len(R_initial)

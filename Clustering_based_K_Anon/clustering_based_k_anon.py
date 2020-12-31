@@ -362,6 +362,9 @@ def clustering_kmember(data, k=25):
 
 
 def adjust_cluster(cluster, residual, k):
+    '''
+    Adjust clusters, update cluster center
+    '''
     center = cluster.center
     dist_dict = {}
     # add random seed to cluster
@@ -391,11 +394,13 @@ def clustering_oka(data, k=25):
         record = data[index]
         can_clusters.append(Cluster([record], record))
     data = [t for i, t in enumerate(data[:]) if i not in set(seed_index)]
+    # Pop data remaining records in dataset one by one then add to proper cluster
     while len(data) > 0:
-        record = data.pop()        
+        record = data.pop()
         index = find_best_cluster_iloss(record, can_clusters)
-        can_clusters[index].add_record(record)    
+        can_clusters[index].add_record(record)
     residual = []
+    # Check clusters to add clusters with length < k to less_clusters and adjust groups with length > k
     for cluster in can_clusters:
         if len(cluster) < k:
             less_clusters.append(cluster)
@@ -403,16 +408,22 @@ def clustering_oka(data, k=25):
             if len(cluster) > k:
                 adjust_cluster(cluster, residual, k)
             clusters.append(cluster)
+    # After adjustment, redundant records which are the furthest records from center of each cluster are added into residual set
+    # Handle records in residual one by one    
     while len(residual) > 0:
         record = residual.pop()
+        # In case still have clusters with length < k, add into them
         if len(less_clusters) > 0:
+            # Find the best cluster with less loss if moving this record into it
             index = find_best_cluster_iloss(record, less_clusters)
             less_clusters[index].add_record(record)
-            if less_clusters[index] >= k:
+            if len(less_clusters[index]) >= k:
                 clusters.append(less_clusters.pop(index))
+        # Otherwise add the record into a cluster with length >= k
         else:
             index = find_best_cluster_iloss(record, clusters)
             clusters[index].add_record(record)
+            
     return clusters
 
 
