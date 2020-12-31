@@ -6,6 +6,7 @@ import operator
 import hashlib
 import copy
 import traceback
+import time
 
 
 DATA_FILE_PATH = './dataset/adult-prep.data'
@@ -220,6 +221,8 @@ def metrics_cavg_raw(groups: list):
         total_size += len(group)
         if len(group) < DESIRED_K:
             no_unsafe_groups += 1
+            print('UNSAFE GROUP')
+            print(group)
     return total_size / len(groups), total_size, no_unsafe_groups
 
 
@@ -457,10 +460,15 @@ def construct_r_care(R_initial: list):
 def construct_r_affected_by_a_migration(R_care: list, T: list, group_j: GROUP):
     '''Construct the rule set affected 
     by a migration operation of tuples T from group i to group j'''
-    R_result = []    
+    R_result = []
+    # times = []
     for rule in R_care:
-        for data_tuple in T:
+        for data_tuple in T:            
+            # st = time.time()
             if move_data_tuple_affect_a_rule(data_tuple, rule, group_j):
                 R_result.append(rule)
+            # times.append(float(time.time() - st))
+
+    # print('Total {} checks, sum {}'.format(len(times), sum(times)))
 
     return R_result

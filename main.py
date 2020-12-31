@@ -26,8 +26,8 @@ for k in K_SET:
 
     commands = [
         # run_m3ar_algo,
-        run_modified_algo,
-        # run_oka_algo,
+        # run_modified_algo,
+        run_oka_algo,
     ]
     print(commands)
     for cmd in commands:
