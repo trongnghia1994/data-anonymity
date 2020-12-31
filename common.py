@@ -70,19 +70,19 @@ class DATA_TUPLE:
     group_index: int
 
 
-def is_safe_group(a_group: GROUP):
-    return group_length(a_group) >= DESIRED_K
+def is_safe_group(a_group: GROUP, k=DESIRED_K):
+    return group_length(a_group) >= k
 
 
-def is_unsafe_group(a_group: GROUP):
-    return not is_safe_group(a_group)
+def is_unsafe_group(a_group: GROUP, k=DESIRED_K):
+    return not is_safe_group(a_group, k)
 
 
 def group_length(a_group: GROUP):
     return (len(a_group.origin_tuples) + len(a_group.received_tuples))
 
 
-def build_groups(dataset: pandas.DataFrame, quasi_attrs: list = QUASI_ATTRIBUTES):
+def build_groups(dataset: pandas.DataFrame, quasi_attrs: list = QUASI_ATTRIBUTES, k=DESIRED_K):
     '''Build safe groups and unsafe groups from the initial dataset'''
     UG, SG = [], []
     DF_GROUPS = dataset.groupby(quasi_attrs)
@@ -95,7 +95,7 @@ def build_groups(dataset: pandas.DataFrame, quasi_attrs: list = QUASI_ATTRIBUTES
             group_data.append(data_tuple)
 
         group = GROUP(group_index, len(group_data), group_data, [], group_data[0].data.values)
-        if is_safe_group(group):
+        if is_safe_group(group, k):
             SG.append(group)
         else:
             UG.append(group)
@@ -215,11 +215,11 @@ def metrics_cavg(groups: list):
     return sum(group_length(group) for group in groups) / len(groups)
 
 
-def metrics_cavg_raw(groups: list):
+def metrics_cavg_raw(groups: list, k=DESIRED_K):
     total_size, no_unsafe_groups = 0, 0
     for _, group in groups:
         total_size += len(group)
-        if len(group) < DESIRED_K:
+        if len(group) < k:
             no_unsafe_groups += 1
             print('UNSAFE GROUP')
             print(group)

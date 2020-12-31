@@ -5,12 +5,13 @@ from Apriori import apriori_gen_rules
 from eval import eval_results
 import pickle, subprocess, time, pandas, sys, time
 
-if __name__ == '__main__':
-    sys.stdout = open("log/oka_results.log", "a")
+if __name__ == '__main__':    
     if len(sys.argv) > 3:
         abs_data_path, oka_abs_output_path, initial_rules_path, k = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
     else:
         abs_data_path, oka_abs_output_path, initial_rules_path = '', '', ''
+    
+    sys.stdout = open("log/oka_results_k_" + str(k) + ".log", "a")
 
     R_initial = []
     with open(initial_rules_path, 'rb') as f:

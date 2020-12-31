@@ -56,13 +56,13 @@ def cal_number_of_free_tuples(groups: list, k: int):
         print('NUMBER OF FREE TUPLES: {}'.format(no_free_tuples))
 
 
-def generate_free_tuples(SG: list):
+def generate_free_tuples(SG: list, k=DESIRED_K):
     '''
     Pick free tuples in each safe group to establish a set of free tuples. Just pick the neccessary tuples at first of each safe group
     '''
     free_tuples = []
     for group in SG:
-        group_free_tuples = group.origin_tuples[:group_length(group) - DESIRED_K]
+        group_free_tuples = group.origin_tuples[:group_length(group) - k]
         free_tuples.extend(group_free_tuples)
 
     return free_tuples
@@ -84,7 +84,7 @@ def all_rules_having_positive_budgets(rules: list):
     return all([rule.budget > 0 for rule in rules])
 
 
-def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):    
+def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data', k=DESIRED_K):    
     start_time = time.time()
     # First construct R care
     R_care = construct_r_care(R_initial)
@@ -100,9 +100,9 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
     # Sort groups in UG and SG by length ascendingly
     GROUPS, SG, UG = build_groups(D)
-    print('K =', DESIRED_K)
+    print('IN ALGO K =', k)
     print('THERE ARE {} SAFE GROUPS AND {} UNSAFE GROUPS'.format(len(SG), len(UG)))
-    cal_number_of_free_tuples(GROUPS, DESIRED_K)
+    # cal_number_of_free_tuples(GROUPS, k)
     free_tuples = generate_free_tuples(SG)    
     SelG = None
     loop_iteration = 0
@@ -117,7 +117,7 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
             # print('Rules budget now are:')
             # print([rule.budget for rule in R_care])
 
-            no_tuples_needed_to_become_a_safe_group = DESIRED_K - group_length(SelG)
+            no_tuples_needed_to_become_a_safe_group = k - group_length(SelG)
             no_tuples_picked = 0
             free_tuples_to_remove = []
             for data_tuple in free_tuples:
@@ -164,12 +164,12 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
 
     print('TOTAL LOOPS: {}'.format(loop_iteration))
     print('AFTER STAGE 1')
-    print('TOTAL NUMBER OF SAFE GROUPS: {}'.format(len([group for group in GROUPS if group_length(group) >= DESIRED_K])))
-    print('TOTAL NUMBER OF UNSAFE GROUPS: {}'.format(len([group for group in GROUPS if 0 < group_length(group) < DESIRED_K])))
-    print('NUMBER OF WRONG SAFE GROUPS: {}'.format(len([g for g in SG if group_length(g) < DESIRED_K])))
+    print('TOTAL NUMBER OF SAFE GROUPS: {}'.format(len([group for group in GROUPS if group_length(group) >= k])))
+    print('TOTAL NUMBER OF UNSAFE GROUPS: {}'.format(len([group for group in GROUPS if 0 < group_length(group) < k])))
+    print('NUMBER OF WRONG SAFE GROUPS: {}'.format(len([g for g in SG if group_length(g) < k])))
     print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len(UG), len(SG)))
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k)))
     print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
     rule_budgets = [rule.budget for rule in R_care]
     print('R CARE BUDGETS AFTER STAGE 1:')
@@ -179,7 +179,7 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
     UG = sorted(UG, key=lambda gr: group_length(gr))
     UG_SMALL_DISPERSED, UG_BIG_DISPERSED = [], []
     for unsafe_group in UG:
-        if group_length(unsafe_group) <= DESIRED_K / 2:  # With small group disperse them
+        if group_length(unsafe_group) <= k / 2:  # With small group disperse them
             st = time.time()
             dst_group, R_affected = find_group_to_move_dispersing(R_care, unsafe_group.origin_tuples, SG, random_choice=True)
             print('Find group to move dispersing step takes', time.time() - st, 'seconds', 'Number of safe groups:', len(SG))
@@ -201,7 +201,7 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
             else:
                 print('Cannot find any group for group {} to disperse to'.format(unsafe_group.index))
         else:
-            no_tuples_needed_to_become_a_safe_group = DESIRED_K - group_length(unsafe_group)
+            no_tuples_needed_to_become_a_safe_group = k - group_length(unsafe_group)
             picked_tuples = free_tuples[:no_tuples_needed_to_become_a_safe_group]
             if len(picked_tuples) < no_tuples_needed_to_become_a_safe_group:    # This means the free tuples set is now empty
                 break
@@ -234,10 +234,10 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
     print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len([ug for ug in UG if group_length(ug) > 0]), len(SG)))
     print('NUMBER OF UNSAFE GROUPS WITH LENGTH <= K/2 DISPERSED (MOVED TO A SAFE GROUP): {}'.format(len(UG_SMALL_DISPERSED)))
     print('NUMBER OF UNSAFE GROUPS WITH LENGTH > K/2 DISPERSED (RECEIVED FREE TUPLES): {}'.format(len(UG_BIG_DISPERSED)))
-    print('TOTAL NUMBER OF SAFE GROUPS: {}'.format(len([group for group in GROUPS if group_length(group) >= DESIRED_K])))
-    print('TOTAL NUMBER OF UNSAFE GROUPS: {}'.format(len([group for group in GROUPS if 0 < group_length(group) < DESIRED_K])))
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
+    print('TOTAL NUMBER OF SAFE GROUPS: {}'.format(len([group for group in GROUPS if group_length(group) >= k])))
+    print('TOTAL NUMBER OF UNSAFE GROUPS: {}'.format(len([group for group in GROUPS if 0 < group_length(group) < k])))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k)))
     print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
     print('UG_SMALL_DISPERSED', [g.index for g in UG_SMALL_DISPERSED])
     print('UG_BIG_DISPERSED', [g.index for g in UG_BIG_DISPERSED])
@@ -263,21 +263,22 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
         else:
             print('Cannot find any group for group {} to disperse to'.format(unsafe_group.index))
 
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
     # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k)))
     # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
 
     eval_results(R_initial, GROUPS, output_file_name, start_time)
 
 
-if __name__ == '__main__':
-    # sys.stdout = open("log/modified_algo_results.log", "w")
+if __name__ == '__main__':    
     if len(sys.argv) > 3:
-        data_file_path, initial_rules_path, DESIRED_K = sys.argv[1], sys.argv[2], int(sys.argv[3])
+        data_file_path, initial_rules_path, k = sys.argv[1], sys.argv[2], int(sys.argv[3])
     else:
         data_file_path = 'dataset/adult-prep.data'
         initial_rules_path = 'adult-prep-rules-picked.data'
+
+    sys.stdout = open("log/modified_algo_results_k_" + str(k) + ".log", "w")
     # A dataset reaches k-anonymity if total risks of all groups equals to 0
     # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
@@ -285,13 +286,13 @@ if __name__ == '__main__':
     print('DATASET LENGTH=', dataset_length)
     print('MIN_SUP=', MIN_SUP)
     print('MIN_CONF=', MIN_SUP)
-    print('K=', DESIRED_K)
+    print('K=', k)
     MIN_SUP = MIN_SUP * dataset_length
     R_initial = []
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
     # print('R initial', R_initial)
-    output_file_name = 'out_mod_m3ar_' + str(DESIRED_K) + '_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
-    m3ar_modified_algo(D, R_initial, output_file_name)
+    output_file_name = 'out_mod_m3ar_' + str(k) + '_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
+    m3ar_modified_algo(D, R_initial, output_file_name, k)
 
     sys.stdout.close()

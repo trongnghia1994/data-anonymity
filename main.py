@@ -15,7 +15,7 @@ picked_rules_file = rules_data_file.split('.')[0] + '-picked.data'
 with open(picked_rules_file, 'wb') as f:
     pickle.dump(R_initial, f)
 
-K_SET = [5]
+K_SET = [10]
 for k in K_SET:
     abs_data_path = 'D:/data_anonymity/' + processed_ds
     run_m3ar_algo = ['python', 'm3ar.py', abs_data_path, picked_rules_file, str(k)]
@@ -26,7 +26,7 @@ for k in K_SET:
 
     commands = [
         # run_m3ar_algo,
-        # run_modified_algo,
+        run_modified_algo,
         run_oka_algo,
     ]
     print(commands)

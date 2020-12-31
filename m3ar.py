@@ -12,22 +12,22 @@ from common import *
 from eval import eval_results
 
 
-def group_risk(a_group):
+def group_risk(a_group, k=DESIRED_K):
     group_len = group_length(a_group)
-    if group_len >= DESIRED_K:
+    if group_len >= k:
         return 0
     else:
-        return 2*DESIRED_K - group_len
+        return 2*k - group_len
 
 
-def calc_risk_reduction(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int):
+def calc_risk_reduction(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int, k=DESIRED_K):
     '''Calculate the risk reduction in case performing 
     a migration operation of <no_migrant_tuples> from group i to group j'''
     risk_before = group_risk(group_i) + group_risk(group_j)
     group_i_length_after = group_length(group_i) - no_migrant_tuples
-    group_i_risk_after = 0 if group_i_length_after >= DESIRED_K else 2*DESIRED_K - group_i_length_after
+    group_i_risk_after = 0 if group_i_length_after >= k else 2*k - group_i_length_after
     group_j_length_after = group_length(group_j) + no_migrant_tuples
-    group_j_risk_after = 0 if group_j_length_after >= DESIRED_K else 2*DESIRED_K - group_j_length_after
+    group_j_risk_after = 0 if group_j_length_after >= k else 2*k - group_j_length_after
     return risk_before - (group_i_risk_after + group_j_risk_after)
 
 
@@ -87,18 +87,18 @@ POLICY 3. Calculate number of migrant tuples in a migration operation
 
 
 # Migrate tuples from group i to group j
-def cal_number_of_migrant_tuples(group_i, group_j, migration_direction='l2r'):
+def cal_number_of_migrant_tuples(group_i, group_j, migration_direction='l2r', k=DESIRED_K):
     if is_unsafe_group(group_j):
         if migration_direction == 'l2r':
-            return min(group_length(group_i), DESIRED_K - group_length(group_j))
+            return min(group_length(group_i), k - group_length(group_j))
         else:
-            return min(group_length(group_j), DESIRED_K - group_length(group_i))
+            return min(group_length(group_j), k - group_length(group_i))
     else:
         if migration_direction == 'l2r':
             return group_length(group_i)
         else:
-            return min(DESIRED_K - group_length(group_i),
-                                    group_length(group_j) - DESIRED_K, len(group_j.origin_tuples))
+            return min(k - group_length(group_i),
+                                    group_length(group_j) - k, len(group_j.origin_tuples))
             
 # END OF POLICIES
 def apply_policies(R_care, group_i, group_j, migration_direction='l2r'):
@@ -233,14 +233,14 @@ def disperse(R_care: list, um_group: GROUP, GROUPS: list, SG: list, UM: list):
             print('DISPERSE: CANNOT FIND ANY GROUP TO MOVE TUPLES FROM GROUP {}'.format(um_group.index))
 
 
-def m3ar_algo(D, R_initial, output_file_name):
+def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
     start_time = time.time()
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
     GROUPS, SG, UG = build_groups(D)
     print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in SG)))
     print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in UG)))
     UM = []  # Set of groups that cannot migrate member with other groups
-    print('K =', DESIRED_K)
+    print('K =', k)
     print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS:', len(UG), len(SG))
     R_care = construct_r_care(R_initial)  # List of cared rules
     for r in R_care:
@@ -299,9 +299,9 @@ def m3ar_algo(D, R_initial, output_file_name):
                 SelG = None
 
     print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))    
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
     print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K and group not in UM)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k and group not in UM)))
     print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
     print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))
     print('=======================================')
@@ -316,9 +316,9 @@ def m3ar_algo(D, R_initial, output_file_name):
 
     print('AFTER DISPERSING: NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
     print('FINAL RESULTS: UG length: {}. SG length: {}. UM length: {}\n'.format(len(UG), len(SG), len(UM)))    
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
     print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k)))
     print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
     print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))    
 
@@ -326,9 +326,9 @@ def m3ar_algo(D, R_initial, output_file_name):
 
 
 if __name__ == '__main__':
-    # sys.stdout = open("log/m3ar_results.log", "w")
+    # sys.stdout = open("log/m3ar_results_k_" + k + "".log", "w")
     if len(sys.argv) > 3:
-        data_file_path, initial_rules_path, DESIRED_K = sys.argv[1], sys.argv[2], int(sys.argv[3])
+        data_file_path, initial_rules_path, k = sys.argv[1], sys.argv[2], int(sys.argv[3])
     else:
         data_file_path = 'dataset/adult-prep.data'
         initial_rules_path = 'adult-prep-rules-picked.data'
@@ -339,13 +339,13 @@ if __name__ == '__main__':
     print('DATASET LENGTH=', dataset_length)
     print('MIN_SUP=', MIN_SUP)
     print('MIN_CONF=', MIN_SUP)
-    print('K=', DESIRED_K)
+    print('K=', k)
     MIN_SUP = MIN_SUP * dataset_length
     R_initial = []
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
     # print('R initial', R_initial)
-    output_file_name = 'out_m3ar_k_' + str(DESIRED_K) + '_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
-    m3ar_algo(D, R_initial, output_file_name)
+    output_file_name = 'out_m3ar_k_' + str(k) + '_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
+    m3ar_algo(D, R_initial, output_file_name, k)
 
     sys.stdout.close()
