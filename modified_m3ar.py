@@ -23,18 +23,23 @@ def budgets_of_rules_affected_by_migrating_a_tuple(R_care, t: DATA_TUPLE, group_
 
 
 # Migrate the data tuple into the most useful group of a safe group
-def find_group_to_move_dispersing(R_care: list, ug_data_tuples: list, SG: list):
+def find_group_to_move_dispersing(R_care: list, ug_data_tuples: list, SG: list, random_choice=False):
     min_no_rule_budgets = 99999
     affected_rules = []
     result_group = None
-    for considering_dst_group in SG:
-        R_affected = construct_r_affected_by_a_migration(R_care, ug_data_tuples, considering_dst_group)
-        no_rules_with_negative_budget = sum(1 for rule in R_affected if rule.budget < 0)
+    if random_choice:
+        result_group = random.choice(SG)
+        print('Random choose group {} for dispersing small group'.format(result_group.index))
+        R_affected = construct_r_affected_by_a_migration(R_care, ug_data_tuples, result_group)
+    else:
+        for considering_dst_group in SG:
+            R_affected = construct_r_affected_by_a_migration(R_care, ug_data_tuples, considering_dst_group)
+            no_rules_with_negative_budget = sum(1 for rule in R_affected if rule.budget < 0)
 
-        if no_rules_with_negative_budget < min_no_rule_budgets:
-            result_group = considering_dst_group
-            min_no_rule_budgets = no_rules_with_negative_budget
-            affected_rules = R_affected
+            if no_rules_with_negative_budget < min_no_rule_budgets:
+                result_group = considering_dst_group
+                min_no_rule_budgets = no_rules_with_negative_budget
+                affected_rules = R_affected
 
     return result_group, affected_rules
                         
@@ -177,7 +182,7 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
     for unsafe_group in UG:
         if group_length(unsafe_group) <= DESIRED_K / 2:  # With small group disperse them
             st = time.time()
-            dst_group, R_affected = find_group_to_move_dispersing(R_care, unsafe_group.origin_tuples, SG)
+            dst_group, R_affected = find_group_to_move_dispersing(R_care, unsafe_group.origin_tuples, SG, random_choice=True)
             print('Find group to move dispersing step takes', time.time() - st, 'seconds', 'Number of safe groups:', len(SG))
             if dst_group:
                 for rule in R_affected:
@@ -207,7 +212,7 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
                 rule.budget -= 1
             for data_tuple in picked_tuples:
                 convert_quasi_attributes(data_tuple, unsafe_group)
-            print('UNSAFE BIG GROUP {} RECEIVED FREE TUPLES TO BECOME SAFE'.format(unsafe_group.index))
+            print('UNSAFE BIG GROUP {} RECEIVED {} FREE TUPLES TO BECOME SAFE'.format(unsafe_group.index, no_tuples_needed_to_become_a_safe_group))
             unsafe_group.received_tuples.extend(picked_tuples)
             add_group(unsafe_group, SG) # Now becomes safe
             for data_tuple in picked_tuples:
@@ -226,45 +231,45 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
         print('Big group dispersed', g_big.index, group_length(g_big))
         remove_group(g_big, UG)
 
-    # print('AFTER STAGE 2')
-    # print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len([ug for ug in UG if group_length(ug) > 0]), len(SG)))
-    # print('NUMBER OF UNSAFE GROUPS WITH LENGTH <= K/2 DISPERSED (MOVED TO A SAFE GROUP): {}'.format(len(UG_SMALL_DISPERSED)))
-    # print('NUMBER OF UNSAFE GROUPS WITH LENGTH > K/2 DISPERSED (RECEIVED FREE TUPLES): {}'.format(len(UG_BIG_DISPERSED)))
-    # print('TOTAL NUMBER OF SAFE GROUPS: {}'.format(len([group for group in GROUPS if group_length(group) >= DESIRED_K])))
-    # print('TOTAL NUMBER OF UNSAFE GROUPS: {}'.format(len([group for group in GROUPS if 0 < group_length(group) < DESIRED_K])))
-    # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
-    # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
-    # print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
-    # print('UG_SMALL_DISPERSED', [g.index for g in UG_SMALL_DISPERSED])
-    # print('UG_BIG_DISPERSED', [g.index for g in UG_BIG_DISPERSED])
-    # rule_budgets = [rule.budget for rule in R_care]
-    # print('R CARE BUDGETS AFTER STAGE 1:')
-    # print(rule_budgets)
+    print('AFTER STAGE 2')
+    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS: {}, {}'.format(len([ug for ug in UG if group_length(ug) > 0]), len(SG)))
+    print('NUMBER OF UNSAFE GROUPS WITH LENGTH <= K/2 DISPERSED (MOVED TO A SAFE GROUP): {}'.format(len(UG_SMALL_DISPERSED)))
+    print('NUMBER OF UNSAFE GROUPS WITH LENGTH > K/2 DISPERSED (RECEIVED FREE TUPLES): {}'.format(len(UG_BIG_DISPERSED)))
+    print('TOTAL NUMBER OF SAFE GROUPS: {}'.format(len([group for group in GROUPS if group_length(group) >= DESIRED_K])))
+    print('TOTAL NUMBER OF UNSAFE GROUPS: {}'.format(len([group for group in GROUPS if 0 < group_length(group) < DESIRED_K])))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
+    print('NUMBER OF FREE TUPLES: {}'.format(len(free_tuples)))
+    print('UG_SMALL_DISPERSED', [g.index for g in UG_SMALL_DISPERSED])
+    print('UG_BIG_DISPERSED', [g.index for g in UG_BIG_DISPERSED])
+    rule_budgets = [rule.budget for rule in R_care]
+    print('R CARE BUDGETS:')
+    print(rule_budgets)
 
-    # # STAGE 3: PROCESS ONE BY ONE IN THE REMAINING UNSAFE GROUP, START WITH GROUP WITH SHORT LENGTH
-    # for unsafe_group in UG:
-    #     # first_tuple_of_this_unsafe_group = unsafe_group.origin_tuples[0]
-    #     dst_group, R_affected = find_group_to_move_dispersing(R_care, unsafe_group.origin_tuples, SG)
-    #     if dst_group:
-    #         for rule in R_affected:                
-    #             rule.budget -= 1
-    #         for data_tuple in unsafe_group.origin_tuples:
-    #             convert_quasi_attributes(data_tuple, dst_group)
-    #             dst_group.received_tuples.append(data_tuple)                                    
-    #         for data_tuple in unsafe_group.received_tuples:
-    #             convert_quasi_attributes(data_tuple, dst_group)
-    #             dst_group.received_tuples.append(data_tuple)
-    #         unsafe_group.origin_tuples = []
-    #         unsafe_group.received_tuples = []
-    #     else:
-    #         print('Cannot find any group for group {} to disperse to'.format(unsafe_group.index))
+    # STAGE 3: PROCESS ONE BY ONE IN THE REMAINING UNSAFE GROUP, START WITH GROUP WITH SHORT LENGTH
+    for unsafe_group in UG:
+        # first_tuple_of_this_unsafe_group = unsafe_group.origin_tuples[0]
+        dst_group, R_affected = find_group_to_move_dispersing(R_care, unsafe_group.origin_tuples, SG)
+        if dst_group:
+            for rule in R_affected:                
+                rule.budget -= 1
+            for data_tuple in unsafe_group.origin_tuples:
+                convert_quasi_attributes(data_tuple, dst_group)
+                dst_group.received_tuples.append(data_tuple)                                    
+            for data_tuple in unsafe_group.received_tuples:
+                convert_quasi_attributes(data_tuple, dst_group)
+                dst_group.received_tuples.append(data_tuple)
+            unsafe_group.origin_tuples = []
+            unsafe_group.received_tuples = []
+        else:
+            print('Cannot find any group for group {} to disperse to'.format(unsafe_group.index))
 
-    # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
-    # # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
-    # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
-    # # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
+    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= DESIRED_K)))
+    # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
+    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < DESIRED_K)))
+    # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
 
-    # eval_results(R_initial, GROUPS, output_file_name, start_time)
+    eval_results(R_initial, GROUPS, output_file_name, start_time)
 
 
 if __name__ == '__main__':
