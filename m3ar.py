@@ -147,7 +147,7 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
     remaining_groups = UG + SG
     results = []
     # i = 0
-    print('FIND A GROUP TO PERFORM MIGRATE IN {} REMAINING GROUPS'.format(len(remaining_groups)))
+    print('FIND A GROUP TO PERFORM MIGRATION IN {} REMAINING GROUPS'.format(len(remaining_groups)))
     st = time.time()
     for group in remaining_groups:
         # if i % 200 == 0:
@@ -161,7 +161,7 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, UG: list, SG: lis
             if factors_reverse[0]:
                 results.append(factors_reverse)
         # i += 1
-    print('RUN TIME TO FIND A GROUP TO MIGRATE: {}'.format(time.time() - st))
+    print('RUN TIME TO FIND A GROUP TO MIGRATION: {}'.format(time.time() - st))
     if len(results) == 0:   # There is no choice to move
         return None
     
@@ -326,18 +326,20 @@ def m3ar_algo(D, R_initial, output_file_name):
 
 
 if __name__ == '__main__':
-    sys.stdout = open("log/m3ar_results.log", "w")
+    # sys.stdout = open("log/m3ar_results.log", "w")
     if len(sys.argv) > 3:
         data_file_path, initial_rules_path, DESIRED_K = sys.argv[1], sys.argv[2], int(sys.argv[3])
     else:
-        data_file_path = 'dataset/adult-min-1000-prep.data'
-        initial_rules_path = 'adult-min-1000-prep-rules-picked.data'
+        data_file_path = 'dataset/adult-prep.data'
+        initial_rules_path = 'adult-prep-rules-picked.data'
     # A dataset reaches k-anonymity if total risks of all groups equals to 0
     # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
     dataset_length = D.shape[0]
-    print('Dataset length', dataset_length)    
-    print('MIN_SUP', MIN_SUP)
+    print('DATASET LENGTH=', dataset_length)
+    print('MIN_SUP=', MIN_SUP)
+    print('MIN_CONF=', MIN_SUP)
+    print('K=', DESIRED_K)
     MIN_SUP = MIN_SUP * dataset_length
     R_initial = []
     with open(initial_rules_path, 'rb') as f:

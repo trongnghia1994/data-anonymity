@@ -7,11 +7,6 @@ from Apriori import apriori_gen_rules
 def eval_results(R_initial, groups, output_file_name, start_time, other_algo=False):
     total_time = time.time() - start_time
     print('================================================================================')
-
-    print('LENGTH OF R_INITIAL: {}'.format(len(R_initial)))
-    print('EVALUATED AT {}'.format(datetime.datetime.now().strftime('%d/%m/%Y, %H:%M:%S')))
-    print('RUN TIME: {} seconds'.format(total_time))
-
     print('=========FINAL GROUPS=========')
     if other_algo:
         print('***IGNORED PRINTING GROUPS AND EXPORT DATASET FOR OTHER ALGOS***')
@@ -38,6 +33,9 @@ def eval_results(R_initial, groups, output_file_name, start_time, other_algo=Fal
         pprint_rule(rule)
 
     print('=========METRICS=========')
+    print('EVALUATED AT {}'.format(datetime.datetime.now().strftime('%d/%m/%Y, %H:%M:%S')))
+    print('LENGTH OF R_INITIAL: {}'.format(len(R_initial)))    
+    print('RUN TIME: {} seconds'.format(total_time))
     print('Number of groups:', len(groups))
     if other_algo:
         cavg_raw, total_no_tuples, no_unsafe_groups = metrics_cavg_raw(groups)    

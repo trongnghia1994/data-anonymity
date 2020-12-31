@@ -51,10 +51,9 @@ def cal_number_of_free_tuples(groups: list, k: int):
         K_SET = [k]
     for k in K_SET:
         no_free_tuples = 0
-        print('WITH K={}'.format(k))
         for group in groups:
             no_free_tuples += group_length(group) - k if group_length(group) >= k else 0
-        print('Number of free tuples: {}'.format(no_free_tuples))
+        print('NUMBER OF FREE TUPLES: {}'.format(no_free_tuples))
 
 
 def generate_free_tuples(SG: list):
@@ -102,7 +101,7 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data'):
     # Sort groups in UG and SG by length ascendingly
     GROUPS, SG, UG = build_groups(D)
     print('K =', DESIRED_K)
-    print('There are {} safe groups and {} unsafe groups'.format(len(SG), len(UG)))
+    print('THERE ARE {} SAFE GROUPS AND {} UNSAFE GROUPS'.format(len(SG), len(UG)))
     cal_number_of_free_tuples(GROUPS, DESIRED_K)
     free_tuples = generate_free_tuples(SG)    
     SelG = None
@@ -283,7 +282,10 @@ if __name__ == '__main__':
     # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
     dataset_length = D.shape[0]
-    print('Dataset length', dataset_length)    
+    print('DATASET LENGTH=', dataset_length)
+    print('MIN_SUP=', MIN_SUP)
+    print('MIN_CONF=', MIN_SUP)
+    print('K=', DESIRED_K)
     MIN_SUP = MIN_SUP * dataset_length
     R_initial = []
     with open(initial_rules_path, 'rb') as f:
