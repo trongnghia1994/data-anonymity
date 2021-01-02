@@ -4,9 +4,7 @@ from ar_mining import cal_supp_conf
 from Apriori import apriori_gen_rules
 
 
-def eval_results(R_initial, groups, output_file_name, start_time, other_algo=False, k=DESIRED_K):
-    total_time = time.time() - start_time
-    print('================================================================================')
+def eval_results(R_initial, groups, output_file_name, total_time, other_algo=False, k=DESIRED_K):
     print('=========FINAL GROUPS=========')
     if other_algo:
         print('***IGNORED PRINTING GROUPS AND EXPORT DATASET FOR OTHER ALGOS***')
@@ -19,18 +17,13 @@ def eval_results(R_initial, groups, output_file_name, start_time, other_algo=Fal
     R_initial.sort(key=lambda rule: rule.hash_value)
     for rule in R_initial:
         pprint_rule(rule)
-    # Recalculate support and confidence of rules    
-    modified_R_initial = cal_supp_conf(output_file_name, RETAINED_DATA_COLUMNS, R_initial)
-    no_existing_rules = 0
-    for rule in modified_R_initial:
-        if rule.support >= MIN_SUP and rule.confidence >= MIN_CONF:
-            no_existing_rules += 1
-
+    print('==============================')
     print('=========RULES MINED ON MODIFIED DATASET=========')
     _, md_rules = apriori_gen_rules(output_file_name)
     md_rules.sort(key=lambda rule: rule.hash_value)    
     for rule in md_rules:
         pprint_rule(rule)
+    print('==============================')
 
     print('=========METRICS=========')
     print('EVALUATED AT {}'.format(datetime.datetime.now().strftime('%d/%m/%Y, %H:%M:%S')))
@@ -45,9 +38,8 @@ def eval_results(R_initial, groups, output_file_name, start_time, other_algo=Fal
     else:
         print('Number of unsafe groups:', sum(1 for gr in groups if 0 < group_length(gr) < k))
         print('Number of tuples:', sum(group_length(gr) for gr in groups))
-        print('CAVG:', metrics_cavg(groups, k))    
-    no_existing_rules = no_existing_rules / len(R_initial)
-    print('Number of existing rules: {}'.format(no_existing_rules))
+        print('CAVG:', metrics_cavg(groups, k))
+
     no_new_rules, no_loss_rules, no_diff_rules = rules_metrics(R_initial, md_rules)
     print('Number of new rules:', no_new_rules)
     print('Number of loss rules:', no_loss_rules)

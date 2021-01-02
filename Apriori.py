@@ -9,7 +9,7 @@ import itertools
 import json
 import pickle
 from itertools import combinations
-from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM, MIN_SUP, MIN_CONF, gen_rule_hash_value
+from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM, MIN_SUP, MIN_CONF, gen_rule_hash_value, QUASI_ATTRIBUTES
 numeric_columns = ["capital-gain", "hours-per-week"]
 
 
@@ -127,14 +127,15 @@ def apriori(dict_table, support):
 def gen_rules(item_set, dict_table, min_conf, output_file):
     result = []
     items = item_set['itemset']
+    rule_index = 0
     for i in range(1, len(items)):
         lhs_candidates = list(itertools.combinations(items, i))
-        for lhs in lhs_candidates:
-            rule = RULE(A=[], B=[], support=0, confidence=0, budget=0)
+        for lhs in lhs_candidates:            
             rhs = tuple(set(items) - set(lhs))
             lhs_support = generate_counts_itemset(lhs, dict_table)
             rule_confidence = float(item_set['support']) / float(lhs_support)
             if rule_confidence >= min_conf:
+                rule = RULE(index=rule_index, A=[], B=[], support=0, confidence=0, budget=0)
                 # print(lhs, '===>', rhs, 'support=', item_set['support'], 'confidence=', rule_confidence)                    
                 for rule_item in lhs:
                     attr, value = rule_item.split('_')                    
@@ -144,6 +145,8 @@ def gen_rules(item_set, dict_table, min_conf, output_file):
                         if comma_pos > -1:
                             value = value[:comma_pos] + '-' + value[comma_pos + 1:]
                     rule.A.append(RULE_ITEM(value, attr))
+                    if attr in QUASI_ATTRIBUTES:
+                        rule.quasi.add('{}_{}'.format(attr, value))
 
                 for rule_item in rhs:
                     attr, value = rule_item.split('_')
@@ -153,11 +156,15 @@ def gen_rules(item_set, dict_table, min_conf, output_file):
                         if comma_pos > -1:
                             value = value[:comma_pos] + '-' + value[comma_pos + 1:]
                     rule.B.append(RULE_ITEM(value, attr))
+                    if attr in QUASI_ATTRIBUTES:
+                        rule.quasi.add('{}_{}'.format(attr, value))
 
                 rule.support = item_set['support']
                 rule.confidence = rule_confidence
                 rule.hash_value = gen_rule_hash_value(rule)
-                result.append(rule)    
+                rule.index = rule_index
+                result.append(rule)
+                rule_index += 1
 
     return result
 

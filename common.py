@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import pandas
 import pickle
 import random
@@ -40,6 +40,7 @@ DESIRED_K = 5
 
 @dataclass
 class RULE:
+    index: int
     A: list
     B: list
     lhs_support: int = 0
@@ -47,7 +48,15 @@ class RULE:
     support: int = 0
     confidence: float = 0.0
     budget: float = 0.0
-    hash_value: str = ''
+    quasi: set = field(default_factory=set) 
+    hash_value: str = ''    
+
+
+@dataclass
+class RULE_SIMPLE:
+    index: int
+    budget: float = 0.0
+    quasi: set = field(default_factory=set) 
 
 
 @dataclass
@@ -62,7 +71,8 @@ class GROUP:
     origin_len: int
     origin_tuples: list
     received_tuples: list
-    quasi_attributes_values: list
+    quasi: set = field(default_factory=set) 
+    rules_support: list = field(default_factory=list)
 
 
 @dataclass
@@ -84,7 +94,7 @@ def group_length(a_group: GROUP):
     return (len(a_group.origin_tuples) + len(a_group.received_tuples))
 
 
-def build_groups(dataset: pandas.DataFrame, quasi_attrs: list = QUASI_ATTRIBUTES, k=DESIRED_K):
+def build_groups(dataset: pandas.DataFrame, R_care: list, quasi_attrs: list = QUASI_ATTRIBUTES, k=DESIRED_K):
     '''Build safe groups and unsafe groups from the initial dataset'''
     UG, UG_SMALL, UG_BIG, SG = [], [], [], []
     DF_GROUPS = dataset.groupby(quasi_attrs)
@@ -94,9 +104,15 @@ def build_groups(dataset: pandas.DataFrame, quasi_attrs: list = QUASI_ATTRIBUTES
         for row in df_group.iterrows():
             index, data = row
             data_tuple = DATA_TUPLE(index, data, group_index)
-            group_data.append(data_tuple)
+            group_data.append(data_tuple)            
 
-        group = GROUP(group_index, len(group_data), group_data, [], group_data[0].data.values)
+        group = GROUP(group_index, len(group_data), group_data, [])
+        for attr in quasi_attrs:
+            group.quasi.add('{}_{}'.format(attr, group_data[0].data.get(attr)))
+        for rule in R_care:
+            if rule.quasi.intersection(group.quasi):
+                group.rules_support.append(rule)
+
         if is_safe_group(group, k):
             SG.append(group)
         else:
@@ -131,7 +147,8 @@ def convert_quasi_attributes(data_tuple: DATA_TUPLE, dst_group: GROUP):
         dst_data_tuple = group_first_tuple(dst_group)
         data_tuple.data.update(dst_data_tuple.data[:len(QUASI_ATTRIBUTES)])
     else:
-        data_tuple.data.update(dst_group.quasi_attributes_values)        
+        quasi_attributes_values = [q.split('_')[1] for q in dst_group.quasi]
+        data_tuple.data.update(quasi_attributes_values)        
 
 
 def rule_budget(a_rule):
@@ -151,11 +168,11 @@ def pprint_data_tuple(data_tuple: DATA_TUPLE):
     print(str_concat)
 
 
-def pprint_groups(groups: list):
+def pprint_groups(groups: list, k: int):
     for group in groups:
         print('================================')
         print('Group index', group.index)
-        print('Group length:', group_length(group), '===== Is safe?', is_safe_group(group))
+        print('Group length:', group_length(group), '===== Is safe?', is_safe_group(group, k))
         print('Group origin tuples:', 'Empty' if len(group.origin_tuples) == 0 else '')
         for t in group.origin_tuples:
             pprint_data_tuple(t)
@@ -204,18 +221,10 @@ def rules_metrics(r_before: list, r_after: list):
     r_after_hash = [el.hash_value for el in r_after]
     r_before_hash_set = set(r_before_hash)
     r_after_hash_set = set(r_after_hash)
-    no_new_rules = len(list(set(r_after_hash_set) - set(r_before_hash_set))) / len(r_before)
-    no_loss_rules = len(list(set(r_before_hash_set) - set(r_after_hash_set))) / len(r_before)
-    no_diff_rules = (len(list(set(r_after_hash_set) - set(r_before_hash_set))) + len(list(set(r_before_hash_set) - set(r_after_hash_set)))) / len(r_before)
-    return no_new_rules, no_loss_rules, no_diff_rules
-    # # Cal number of diff rules
-    # no_diff_rules = 0
-    # intersection = r_before_hash_set.intersection(r_after_hash_set)
-    # for r_hash in intersection:
-    #     r_before = list(filter(lambda r: r.hash_value == r_hash, r_before))[0]
-    #     r_after = list(filter(lambda r: r.hash_value == r_hash, r_after))[0]
-    #     if r_after.support != r_before.support or r_after.confidence != r_before.confidence:
-    #         no_diff_rules += 1
+    no_new_rules = len(list(r_after_hash_set - r_before_hash_set)) / len(r_before)
+    no_loss_rules = len(list(r_before_hash_set - r_after_hash_set)) / len(r_before)
+    no_diff_rules = (len(list(r_after_hash_set - r_before_hash_set)) + len(list(r_before_hash_set - r_after_hash_set))) / len(r_before)
+    return no_new_rules, no_loss_rules, no_diff_rules    
 
 
 def metrics_cavg(groups: list, k=DESIRED_K):
@@ -466,22 +475,22 @@ def rule_contains_quasi_attr(rule: RULE):
 
 # Construct the rule set we care (relating to quasi attributes)
 def construct_r_care(R_initial: list):
+    results = []
     R_initial_copy = copy.deepcopy(R_initial)
-    return [rule for rule in R_initial_copy if rule_contains_quasi_attr(rule)]
+    for rule in R_initial_copy:
+        if len(rule.quasi) > 0:            
+            s_rule = RULE_SIMPLE(rule.index, rule_budget(rule), rule.quasi)
+            results.append(s_rule)
+    return results
 
 
-def construct_r_affected_by_a_migration(R_care: list, T: list, group_j: GROUP):
-    '''Construct the rule set affected 
+def construct_r_affected_by_a_migration(group_i: GROUP, group_j: GROUP):
+    '''Construct the rule set affected
     by a migration operation of tuples T from group i to group j'''
-    R_result = []
-    # times = []
-    for rule in R_care:
-        for data_tuple in T:
-            # st = time.time()
-            if move_data_tuple_affect_a_rule(data_tuple, rule, group_j):
-                R_result.append(rule)
-            # times.append(float(time.time() - st))
 
-    # print('Total {} checks, sum {}'.format(len(times), sum(times)))
+    R_result = []
+    for rule in group_i.rules_support:
+        if rule.quasi.intersection(group_j.quasi - group_i.quasi):
+            R_result.append(rule)         
 
     return R_result

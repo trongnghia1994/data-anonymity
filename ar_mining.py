@@ -10,7 +10,6 @@ MODIFIED_DATA_FILE_PATH = 'modified_ds.data'
 
 
 # INPUT_RULES = [RULE([RULE_ITEM('*', 'sex')], [RULE_ITEM('*', 'race')], support_p=0.0, support=0, lhs_support=0, confidence=0.0)]
-INPUT_RULES = [RULE([RULE_ITEM('(30-50]', 'age')], [RULE_ITEM('*', 'marital-status')], support_p=0.0, support=0, lhs_support=0, confidence=0.0)]
 
 
 def cal_supp_conf(data_file_path, columns, input_rules):

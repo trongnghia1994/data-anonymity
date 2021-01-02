@@ -1,5 +1,5 @@
 import pickle, pandas, time
-from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, QUASI_ATTRIBUTES, CAT_TREES, construct_r_affected_by_a_migration, build_groups, construct_r_care
+from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, QUASI_ATTRIBUTES, CAT_TREES, construct_r_affected_by_a_migration, build_groups, construct_r_care, group_length
 
 # # Read list of rules from binary pickled file
 # # with open('initial_rules.data', 'rb') as f:
@@ -173,30 +173,29 @@ def recover_r_affected(path):
             R_affected.update(pickle.load(f))
 
 
-
 if __name__ == '__main__':
     data_file_path = 'dataset/adult-prep.data'
     initial_rules_path = 'adult-prep-rules-picked.data'    
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
     dataset_length = D.shape[0]
     print('DATASET LENGTH=', dataset_length)
-    GROUPS, SG, UG = build_groups(D)
-    groups_col = mydb["groups"]
-    for group in GROUPS:
-        groups_col.insert_one({"_id": group.index, "data": pickle.dumps(group)})
-    R_initial = []
-    with open(initial_rules_path, 'rb') as f:
-        R_initial = pickle.load(f)
-    R_care = construct_r_care(R_initial)  # List of cared rules
-    i = 0
-    st = time.time()
-    # Divide GROUPS into 4 parts
-    chunks = [(UG[:2000], GROUPS, R_care), (UG[2000:4000], GROUPS, R_care), (UG[4000:5500], GROUPS, R_care), (UG[5500:], GROUPS, R_care)]
-    # chunks = [(GROUPS[:1000], R_care), (GROUPS[1000:2000], R_care), (GROUPS[2000:3000], R_care), (GROUPS[3000:4000], R_care)
-    # (GROUPS[4000:5000], R_care), (GROUPS[5000:6000], R_care), (GROUPS[6000:7000], R_care), (GROUPS[7000:], R_care)
-    # ]
-    with Pool(processes=4) as pool:
-        res = pool.map(worker, chunks)
+    GROUPS, SG, UG, UG_SMALL, UG_BIG = build_groups(D, k=10)
+    # groups_col = mydb["groups"]
+    # for group in GROUPS:
+    #     groups_col.insert_one({"_id": group.index, "data": pickle.dumps(group)})
+    # R_initial = []
+    # with open(initial_rules_path, 'rb') as f:
+    #     R_initial = pickle.load(f)
+    # R_care = construct_r_care(R_initial)  # List of cared rules
+    # i = 0
+    # st = time.time()
+    # # Divide GROUPS into 4 parts
+    # chunks = [(UG[:2000], GROUPS, R_care), (UG[2000:4000], GROUPS, R_care), (UG[4000:5500], GROUPS, R_care), (UG[5500:], GROUPS, R_care)]
+    # # chunks = [(GROUPS[:1000], R_care), (GROUPS[1000:2000], R_care), (GROUPS[2000:3000], R_care), (GROUPS[3000:4000], R_care)
+    # # (GROUPS[4000:5000], R_care), (GROUPS[5000:6000], R_care), (GROUPS[6000:7000], R_care), (GROUPS[7000:], R_care)
+    # # ]
+    # with Pool(processes=4) as pool:
+    #     res = pool.map(worker, chunks)
 
     # recover_r_affected('r_affected')
     # print(R_affected)
@@ -206,3 +205,16 @@ if __name__ == '__main__':
 
     # rules = pickle.loads(mycol.find_one({"_id": "1042_1071"})['r'])
     # print(rules)
+
+    GROUPS_LENGTH = {}
+    for group in GROUPS:
+        gr_len = group_length(group)
+        if gr_len not in GROUPS_LENGTH:
+            GROUPS_LENGTH[gr_len] = 1
+        else:
+            GROUPS_LENGTH[gr_len] += 1
+
+    print('Lengths', len(UG), len(SG), len(UG_SMALL), len(UG_BIG))
+    print('Group length stats')
+    for key in sorted(GROUPS_LENGTH):
+        print('Length={}'.format(key), ':', GROUPS_LENGTH[key])

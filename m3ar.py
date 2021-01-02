@@ -12,9 +12,6 @@ from common import *
 from eval import eval_results
 
 
-R_AFFECTED = {}
-
-
 def group_risk(a_group, k=DESIRED_K):
     group_len = group_length(a_group)
     if group_len >= k:
@@ -53,53 +50,12 @@ def has_group_received_tuples(a_group: GROUP):
 
 def has_group_given_tuples(a_group: GROUP):
     return len(a_group.origin_tuples) < a_group.origin_len
-
-
-def choose_group_tuples_for_migration(R_care: list, group_i: GROUP, no_tuples: int, group_j: GROUP):  
-    '''
-    Return indices of tuples selected for a migration  operation of <no_tuples> tuples from <a_group>
-    '''
-    comb = combinations(range(len(group_i.origin_tuples)), no_tuples)
-
-    for a_comb in list(comb):   # Encounter a combination that is good get it
-        tuples_consider_to_move = [group_i.origin_tuples[i] for i in a_comb]
-        R_affected = construct_r_affected_by_a_migration(R_care, tuples_consider_to_move, group_j)
-        budgets_all_rules_affected_positive = all(rule.budget > 0 for rule in R_affected)
-        if budgets_all_rules_affected_positive:
-            return a_comb, R_affected
-
-    return None, []
     
 
 '''
 POLICY 2. g(i)⎯T->g(j) and ∀t∈T → (∀r ∈ R(t),g(i)->g(j)->Budget(r) > 0)
 If migrating tuples T from group i to group j, all rules affected must have positive budgets
 '''
-
-
-def migration_check_budget_all_rules_affected_positive(R_care: list, T: list, group_j: GROUP):
-    '''Check if budget of the rules affected by a migration operation positive'''
-    R_affected = construct_r_affected_by_a_migration(R_care, T, group_j)
-    return all(rule.budget > 0 for rule in R_affected), R_affected
-
-
-def budgets_of_rules_affected_by_migrating_a_tuple(R_care, t: DATA_TUPLE, group_j: GROUP):
-    '''Calculate budgets of rules affected by migrating a data tuple to another group'''
-    R_affected = construct_r_affected_by_a_migration(R_care, [t], group_j)
-    return [rule.budget for rule in R_affected]
-
-
-def build_rules_affected_by_perform_migration(R_care, GROUPS):
-    result = {}
-    for group_outer in GROUPS:
-        for group_inner in GROUPS:
-            if group_outer.index != group_inner.index:
-                key = '{}_{}'.format(group_outer.index, group_inner.index)
-                print(key)
-                result[key] = construct_r_affected_by_a_migration(R_care, [group_outer.origin_tuples[0]], group_inner)        
-
-    return result
-
 
 '''
 POLICY 3. Calculate number of migrant tuples in a migration operation
@@ -129,29 +85,6 @@ def move_data_tuple_affect_a_rule_new(group_i: GROUP, group_j: GROUP, rule: RULE
 
     return False
 
-
-def construct_r_affected_by_a_migration_new(R_care: list, group_i: GROUP, group_j: GROUP):
-    '''Construct the rule set affected
-    by a migration operation of tuples T from group i to group j'''
-    # times = []
-    cache_key = '.'.join(sorted([str(group_i.index), str(group_j.index)]))
-    if cache_key not in R_AFFECTED:
-        R_result = []
-        for rule in R_care:
-            # st = time.time()
-            if move_data_tuple_affect_a_rule_new(group_i, group_j, rule):
-                R_result.append(rule)
-
-        R_AFFECTED[cache_key] = R_result
-    else:
-        # print('HIT CACHE', cache_key)
-        R_result = R_AFFECTED[cache_key]
-                # times.append(float(time.time() - st))
-
-    # print('Total {} checks, sum {}'.format(len(times), sum(times)))    
-
-    return R_result
-
             
 # END OF POLICIES
 def apply_policies(R_care, group_i, group_j, k=DESIRED_K):
@@ -173,10 +106,7 @@ def apply_policies(R_care, group_i, group_j, k=DESIRED_K):
     # POLICY 2
     if no_migrant_tuples > 0:
         # Check budget of rules affected
-        tuples_consider_to_move = group_i.origin_tuples[:no_migrant_tuples]
-        # R_affected = construct_r_affected_by_a_migration(R_care, [tuples_consider_to_move[0]], group_j)
-        R_affected = construct_r_affected_by_a_migration_new(R_care, group_i, group_j)
-        # R_affected = R_AFFECTED['{}_{}'.format(group_i.index, group_j.index)]
+        R_affected = construct_r_affected_by_a_migration(group_i, group_j)
         budgets_all_rules_affected_positive = all(rule.budget > 0 for rule in R_affected)
         if budgets_all_rules_affected_positive:
             ableToMigrate = True
@@ -200,8 +130,8 @@ def do_migration(group_i: GROUP, group_j: GROUP, no_migrant_tuples: int):
 # Apply policies to perform a useful migration operation
 def find_group_to_migrate(R_care: list, selected_group: GROUP, remaining_groups: list, k: DESIRED_K):
     results = []
-    print('FIND A GROUP TO PERFORM MIGRATION IN {} REMAINING GROUPS'.format(len(remaining_groups)))
-    st = time.time()
+    # print('FIND A GROUP TO PERFORM MIGRATION IN {} REMAINING GROUPS'.format(len(remaining_groups)))
+    # st = time.time()
     for group in remaining_groups:        
         if group.index != selected_group.index:
             # Start to apply policies
@@ -236,24 +166,23 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, remaining_groups:
 
 
 # Migrate the data tuple into the most useful group of a safe group
-def find_group_to_move_dispersing(R_care: list, t: DATA_TUPLE, SG: list):
+def find_group_to_move_dispersing(src_group: GROUP, SG: list):
     min_no_rule_budgets = 99999
-    result = None
+    dst_group, R_affected = None, None
     for considering_dst_group in SG:
         # Start to apply policies
-        rule_budgets = budgets_of_rules_affected_by_migrating_a_tuple(R_care, t, considering_dst_group)
-        no_rules_with_negative_budget = sum(1 for budget in rule_budgets if budget < 0)
+        R_affected = construct_r_affected_by_a_migration(src_group, considering_dst_group)
+        no_rules_with_negative_budget = sum(1 for rule in R_affected if rule.budget < 0)
 
         if no_rules_with_negative_budget < min_no_rule_budgets:
-            result = considering_dst_group
+            dst_group = considering_dst_group
             min_no_rule_budgets = no_rules_with_negative_budget            
 
-    return result
+    return dst_group, R_affected
 
 
-def do_disperse_migration(R_care: list, src_group: GROUP, data_tuple: DATA_TUPLE, dst_group: GROUP, is_return=False):    
-    convert_quasi_attributes(data_tuple, dst_group)
-    R_affected = construct_r_affected_by_a_migration(R_care, [data_tuple], dst_group)
+def do_disperse_migration(R_care: list, src_group: GROUP, data_tuple: DATA_TUPLE, dst_group: GROUP, R_affected: list, is_return=False):    
+    convert_quasi_attributes(data_tuple, dst_group)    
     if not is_return:
         src_group.origin_tuples.remove(data_tuple)
         dst_group.received_tuples.append(data_tuple)
@@ -278,7 +207,8 @@ def disperse(R_care: list, um_group: GROUP, GROUPS: list, SG: list, UM: list):
     while len(um_group.received_tuples) > 0:
         data_tuple = um_group.received_tuples[0]
         source_group_of_this_tuple = find_group(data_tuple.group_index, GROUPS)
-        do_disperse_migration(R_care, um_group, data_tuple, source_group_of_this_tuple, is_return=True)
+        R_affected = construct_r_affected_by_a_migration(source_group_of_this_tuple, um_group)
+        do_disperse_migration(R_care, um_group, data_tuple, source_group_of_this_tuple, R_affected, is_return=True)
         print('DISPERSE: GROUP {} RETAKES THE DATA TUPLE {}'.format(source_group_of_this_tuple.index, data_tuple.index))        
         # If the source group now has only 1 tuple, add it to UM to be processed
         if group_length(source_group_of_this_tuple) == 1:
@@ -287,50 +217,47 @@ def disperse(R_care: list, um_group: GROUP, GROUPS: list, SG: list, UM: list):
     while len(um_group.origin_tuples) > 0:
         data_tuple = um_group.origin_tuples[0]
         # Find the most appropriate group g in SG to perform migration
-        dst_group_to_migrate = find_group_to_move_dispersing(R_care, data_tuple, SG)
+        dst_group_to_migrate, R_affected = find_group_to_move_dispersing(um_group, SG)
         if dst_group_to_migrate:
             print('DISPERSE: GROUP {} TAKES THE DATA TUPLE {} FROM GROUP {}'.format(dst_group_to_migrate.index, data_tuple.index, um_group.index))
-            do_disperse_migration(R_care, um_group, data_tuple, dst_group_to_migrate, is_return=False)                
+            do_disperse_migration(R_care, um_group, data_tuple, dst_group_to_migrate, R_affected, is_return=False)                
         else:
             print('DISPERSE: CANNOT FIND ANY GROUP TO MOVE TUPLES FROM GROUP {}'.format(um_group.index))
 
 
 def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
     start_time = time.time()
+    R_care = construct_r_care(R_initial)  # List of cared rules
+    # R_care = R_care[:5]
+    # for r in R_care:
+    #     r.budget = rule_budget(r)
+    print('LENGTH OF R_care', len(R_care))
+    print('===============================================================================')
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
-    GROUPS, SG, UG, UG_SMALL, UG_BIG = build_groups(D, k=k)
+    GROUPS, SG, UG, UG_SMALL, UG_BIG = build_groups(D, R_care=R_care, k=k)
     print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in SG)))
     print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in UG)))
     UM = []  # Set of groups that cannot migrate member with other groups
     print('K =', k)
-    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS:', len(UG), len(SG))
-    R_care = construct_r_care(R_initial)  # List of cared rules
-    # R_care = R_care[:5]
-    for r in R_care:
-        r.budget = rule_budget(r)
-    print('LENGTH OF R_care', len(R_care))
-    print('===============================================================================')
-    # Build R_affected
-    # global R_AFFECTED
-    # R_AFFECTED = build_rules_affected_by_perform_migration(R_care, GROUPS)
-    # print('LENGTH R_AFFECTED', len(R_AFFECTED))
-    UM = [g for g in UG if group_length(g) == 1]
-    for um in UM:
-        UG.remove(um)
-        UG_SMALL.remove(um)
+    print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS:', len(UG), len(SG))    
 
     SelG = None
     loop_iteration = 0
+    UG.sort(key=lambda group: group_length(group))
     while (len(UG) > 0) or (SelG):
         st = time.time()
         loop_iteration += 1
-        print('START LOOP ITERATION {}. UG length: {}. SG length: {}. UM length: {}'.format(loop_iteration, len(UG), len(SG), len(UM)))
+        # print('START LOOP ITERATION {}. UG length: {}. SG length: {}. UM length: {}'.format(loop_iteration, len(UG), len(SG), len(UM)))
         if SelG is None:  # Randomly pick a group SelG from unsafe groups set
-            # print('LOOP ITERATION {}. SelG is None, randomly pick one'.format(loop_iteration))   
+            # print('LOOP ITERATION {}. SelG is None, randomly pick one'.format(loop_iteration))
             SelG = random.choice(UG)
             remove_group(SelG, UG)
+            # if group_length(SelG) <= k/2:
+            #     remove_group(SelG, UG_SMALL)
+            # else:
+            #     remove_group(SelG, UG_BIG)
         
-        print('LOOP ITERATION {}. SelG: {} ({})'.format(loop_iteration, SelG.index, group_length(SelG)))
+        # print('LOOP ITERATION {}. SelG: {} ({})'.format(loop_iteration, SelG.index, group_length(SelG)))
 
         # Find the most appropriate group g in UG and SG to perform migration with SelG
         if group_length(SelG) <= k/2:
@@ -340,16 +267,16 @@ def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
         result_find_migration = find_group_to_migrate(R_care, SelG, remaining_groups, k)        
         # If cannot find such a group, add it to the unmigrant UM set
         if result_find_migration is None:
-            print('LOOP ITERATION {}: NO RESULT FOR MIGRATION'.format(loop_iteration))
+            # print('LOOP ITERATION {}: NO RESULT FOR MIGRATION'.format(loop_iteration))
             add_group(SelG, UM)
             SelG = None
         else:   # If we can find a migration operation
-            print('LOOP ITERATION {}: PREPARE MIGRATION GROUP {} ({}) => GROUP {} ({}): {} TUPLES'.format(loop_iteration, result_find_migration.group_i.index, group_length(result_find_migration.group_i), result_find_migration.group_j.index, group_length(result_find_migration.group_j), result_find_migration.no_migrant_tuples))
+            # print('LOOP ITERATION {}: PREPARE MIGRATION GROUP {} ({}) => GROUP {} ({}): {} TUPLES'.format(loop_iteration, result_find_migration.group_i.index, group_length(result_find_migration.group_i), result_find_migration.group_j.index, group_length(result_find_migration.group_j), result_find_migration.no_migrant_tuples))
             # g is the other group in the migration operation
             g = result_find_migration.group_i if result_find_migration.group_i.index != SelG.index else result_find_migration.group_j
             # Perform a migration operation
             do_migration(result_find_migration.group_i, result_find_migration.group_j, result_find_migration.no_migrant_tuples)
-            print('LOOP ITERATION {}. AFTER MIGRATION: SelG: {} ({}). g: {} ({})'.format(loop_iteration, SelG.index, group_length(SelG), g.index, group_length(g)))
+            # print('LOOP ITERATION {}: AFTER MIGRATION: SelG: {} ({}). g: {} ({})'.format(loop_iteration, SelG.index, group_length(SelG), g.index, group_length(g)))
             for rule in result_find_migration.R_affected:
                 rule.budget -= 1
 
@@ -365,8 +292,8 @@ def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
 
             if group_length(SelG) == 0 and group_length(g) == 0:
                 SelG = None
-                print('LOOP ITERATION {}: BOTH GROUPS SelG AND g NOW HAVE 0 TUPLES'.format(loop_iteration))
-                print('LOOP ITERATION {} FINISHES IN {} SECONDS'.format(loop_iteration, time.time() - st))
+                # print('LOOP ITERATION {}: BOTH GROUPS SelG AND g NOW HAVE 0 TUPLES'.format(loop_iteration))
+                # print('LOOP ITERATION {} FINISHES IN {} SECONDS'.format(loop_iteration, time.time() - st))
                 continue
 
             # Check if now we have a safe group in the pair (SelG, g) or not. 
@@ -376,16 +303,16 @@ def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
                 remove_group(SelG, UG)
                 remove_group(SelG, UG_SMALL)
                 remove_group(SelG, UG_BIG)
-                print('LOOP ITERATION {}: MOVE GROUP {} TO SG'.format(loop_iteration, SelG.index))
+                # print('LOOP ITERATION {}: MOVE GROUP {} TO SG'.format(loop_iteration, SelG.index))
 
             if is_safe_group(g, k):
                 add_group(g, SG)
-                print('LOOP ITERATION {}: MOVE GROUP {} TO SG'.format(loop_iteration, g.index))
+                # print('LOOP ITERATION {}: MOVE GROUP {} TO SG'.format(loop_iteration, g.index))
                 remove_group(g, UG)
                 remove_group(g, UG_SMALL)
                 remove_group(g, UG_BIG)
 
-            print('LOOP ITERATION {}: CHECK SAFE - SelG: {} ({},{}) - g: {} ({},{})'.format(loop_iteration, SelG.index, is_safe_group(SelG, k), 'Empty' if group_length(SelG) == 0 else '', g.index, is_safe_group(g, k), 'Empty' if group_length(g) == 0 else ''))
+            # print('LOOP ITERATION {}: CHECK SAFE - SelG: {} ({},{}) - g: {} ({},{})'.format(loop_iteration, SelG.index, is_safe_group(SelG, k), 'Empty' if group_length(SelG) == 0 else '', g.index, is_safe_group(g, k), 'Empty' if group_length(g) == 0 else ''))
 
             # Handle which group next? If there is any unsafe group in the pair, continue with it
             if is_unsafe_group(SelG, k):
@@ -397,43 +324,48 @@ def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
                 # The next iteration we will choose another group to process
                 SelG = None
 
-            print('LOOP ITERATION {} FINISHES IN {} SECONDS'.format(loop_iteration, time.time() - st))
+            # print('LOOP ITERATION {} FINISHES IN {} SECONDS'.format(loop_iteration, time.time() - st))
 
-    print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))    
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k and group not in UM)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
-    print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))
-    print('=======================================')
-    print('=======================================')
-    print('=======================================')
-    print('START TO DISPERSE', len(UM), 'UM GROUPS')
-    print('NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
+    # print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))    
+    # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
+    # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
+    # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k and group not in UM)))
+    # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
+    # print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))
+    # print('=======================================')
+    # print('=======================================')
+    # print('=======================================')
+    # print('START TO DISPERSE', len(UM), 'UM GROUPS')
+    # print('NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
     while len(UM) > 0: # Disperse
         g_um = UM.pop(0)
         if group_length(g_um) > 0:  # Just consider group with length > 0
             disperse(R_care, g_um, GROUPS, SG, UM)
 
-    print('AFTER DISPERSING: NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
-    print('FINAL RESULTS: UG length: {}. SG length: {}. UM length: {}\n'.format(len(UG), len(SG), len(UM)))    
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
-    print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k)))
-    print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
-    print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))    
+    # print('AFTER DISPERSING: NUMBER OF UM GROUPS WITH LENGTH > 0:', sum(1 for group in UM if group_length(group) > 0))
+    # print('FINAL RESULTS: UG length: {}. SG length: {}. UM length: {}\n'.format(len(UG), len(SG), len(UM)))    
+    # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
+    # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS 2: {}'.format(sum(group_length(group) for group in SG)))
+    # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) < k)))
+    # print('TOTAL NUMBER OF TUPLES IN UNSAFE GROUPS 2: {}'.format(sum(group_length(group) for group in UG)))
+    # print('TOTAL NUMBER OF TUPLES IN UM: {}'.format(sum(group_length(group) for group in UM)))    
+    total_time = time.time()  - start_time
 
-    eval_results(R_initial, GROUPS, output_file_name, start_time)
+    eval_results(R_initial, GROUPS, output_file_name, total_time, k=k)
 
 
-if __name__ == '__main__':
-    # sys.stdout = open("log/m3ar_results_k_" + k + "".log", "w")
+if __name__ == '__main__':    
     if len(sys.argv) > 3:
         data_file_path, initial_rules_path, k = sys.argv[1], sys.argv[2], int(sys.argv[3])
+        log_to_file = True
     else:
         data_file_path = 'dataset/adult-prep.data'
         initial_rules_path = 'adult-prep-rules-picked.data'
         k = 10
+        log_to_file = True
+
+    if log_to_file:
+        sys.stdout = open("log/m3ar_results_k_" + str(k) + ".log", "w")
     # A dataset reaches k-anonymity if total risks of all groups equals to 0
     # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
