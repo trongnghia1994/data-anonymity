@@ -88,6 +88,7 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data', k=DE
     start_time = time.time()
     # First construct R care
     R_care = construct_r_care(R_initial)
+    R_care =  R_care[:5]
     for r in R_care:
         r.budget = rule_budget(r)
     print('R CARE LENGTH =', len(R_care))
@@ -99,10 +100,10 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data', k=DE
     print('===============================================================================')    
     # Build groups from the dataset then split G into 2 sets of groups: safe groups SG and unsafe groups UG
     # Sort groups in UG and SG by length ascendingly
-    GROUPS, SG, UG = build_groups(D)
+    GROUPS, SG, UG, _, _ = build_groups(D, k=k)
     print('IN ALGO K =', k)
     print('THERE ARE {} SAFE GROUPS AND {} UNSAFE GROUPS'.format(len(SG), len(UG)))
-    # cal_number_of_free_tuples(GROUPS, k)
+    cal_number_of_free_tuples(GROUPS, k)
     free_tuples = generate_free_tuples(SG)    
     SelG = None
     loop_iteration = 0
@@ -274,11 +275,15 @@ def m3ar_modified_algo(D, R_initial, output_file_name='m3ar_modified.data', k=DE
 if __name__ == '__main__':    
     if len(sys.argv) > 3:
         data_file_path, initial_rules_path, k = sys.argv[1], sys.argv[2], int(sys.argv[3])
+        log_to_file = True
     else:
         data_file_path = 'dataset/adult-prep.data'
         initial_rules_path = 'adult-prep-rules-picked.data'
+        k = 10
+        log_to_file = False
 
-    sys.stdout = open("log/modified_algo_results_k_" + str(k) + ".log", "w")
+    if log_to_file:
+        sys.stdout = open("log/modified_algo_results_k_" + str(k) + ".log", "w")
     # A dataset reaches k-anonymity if total risks of all groups equals to 0
     # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)

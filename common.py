@@ -6,7 +6,9 @@ import operator
 import hashlib
 import copy
 import traceback
+import numpy
 import time
+import math
 
 
 DATA_FILE_PATH = './dataset/adult-prep.data'
@@ -75,7 +77,7 @@ def is_safe_group(a_group: GROUP, k=DESIRED_K):
 
 
 def is_unsafe_group(a_group: GROUP, k=DESIRED_K):
-    return not is_safe_group(a_group, k)
+    return 0 < group_length(a_group) < k
 
 
 def group_length(a_group: GROUP):
@@ -84,7 +86,7 @@ def group_length(a_group: GROUP):
 
 def build_groups(dataset: pandas.DataFrame, quasi_attrs: list = QUASI_ATTRIBUTES, k=DESIRED_K):
     '''Build safe groups and unsafe groups from the initial dataset'''
-    UG, SG = [], []
+    UG, UG_SMALL, UG_BIG, SG = [], [], [], []
     DF_GROUPS = dataset.groupby(quasi_attrs)
     group_index = 0
     for _, df_group in DF_GROUPS:
@@ -98,12 +100,17 @@ def build_groups(dataset: pandas.DataFrame, quasi_attrs: list = QUASI_ATTRIBUTES
         if is_safe_group(group, k):
             SG.append(group)
         else:
+            if group_length(group) <= k /2:
+                UG_SMALL.append(group)
+            else:
+                UG_BIG.append(group)
+
             UG.append(group)
 
         group_index += 1
 
     GROUPS = SG + UG
-    return GROUPS, SG, UG
+    return GROUPS, SG, UG, UG_SMALL, UG_BIG
 
 
 def group_first_tuple(a_group: GROUP):
@@ -112,7 +119,7 @@ def group_first_tuple(a_group: GROUP):
         return a_group.origin_tuples[0]
 
     if len(a_group.received_tuples) > 0:
-        return a_group.origin_tuples[0]
+        return a_group.received_tuples[0]
 
     return None
 
@@ -211,8 +218,8 @@ def rules_metrics(r_before: list, r_after: list):
     #         no_diff_rules += 1
 
 
-def metrics_cavg(groups: list):
-    return sum(group_length(group) for group in groups) / len(groups)
+def metrics_cavg(groups: list, k=DESIRED_K):
+    return sum(group_length(group) for group in groups) / len(groups) / k
 
 
 def metrics_cavg_raw(groups: list, k=DESIRED_K):
@@ -223,7 +230,7 @@ def metrics_cavg_raw(groups: list, k=DESIRED_K):
             no_unsafe_groups += 1
             print('UNSAFE GROUP')
             print(group)
-    return total_size / len(groups), total_size, no_unsafe_groups
+    return (total_size / len(groups)) / k, total_size, no_unsafe_groups
 
 
 def remove_group(group: GROUP, group_list: list):
@@ -396,19 +403,25 @@ def move_data_tuple_affect_a_rule(data_tuple: DATA_TUPLE, rule: RULE, group_j: G
 def data_tuple_supports_item_sets(rule_items: list, data_tuple: DATA_TUPLE):
     for rule_item in rule_items:
         step_res = True
-        tuple_value = data_tuple.get(rule_item.attr)
+        tuple_value = data_tuple.get(rule_item.attr)        
         if rule_item.value == tuple_value:
-            step_res = True        
+            step_res = True
         else:   # Handle Generalization values
             # Handle numerical attributes age 1    rule_item:age (20, 30])
             if type(tuple_value) in [float, int] and type(rule_item.value) is str:
-                # Construct number value range
-                op_comparison_1 = '>=' if str(rule_item.value)[0] == '[' else '>'
-                op_comparison_2 = '<=' if str(rule_item.value)[-1] == ']' else '<'                     
-                l = ''.join(rule_item.value[1: -1].split('-')[:-1])                
-                h = rule_item.value[1: -1].split('-')[-1]
-                l, h = float(l.strip()), float(h.strip())
-                step_res = OPERATORS[op_comparison_1](tuple_value, l) and OPERATORS[op_comparison_2](tuple_value, h)
+                if math.isnan(tuple_value) or tuple_value == numpy.nan:    # Missing data (Suppresssion)
+                    step_res = False
+                else:
+                    # Construct number value range
+                    try:
+                        op_comparison_1 = '>=' if str(rule_item.value)[0] == '[' else '>'
+                        op_comparison_2 = '<=' if str(rule_item.value)[-1] == ']' else '<'                     
+                        l = ''.join(rule_item.value[1: -1].split('-')[:-1])                
+                        h = rule_item.value[1: -1].split('-')[-1]
+                        l, h = float(l.strip()), float(h.strip())
+                        step_res = OPERATORS[op_comparison_1](tuple_value, l) and OPERATORS[op_comparison_2](tuple_value, h)
+                    except:
+                        print('Exception', tuple_value, type(tuple_value), tuple_value == numpy.nan)
             elif type(tuple_value) is str:   # Handle categorical attributes
                 # Check tuple value in a tree branch in which the rule item value is one of ancestors
                 is_in_cat_tree = False
@@ -463,7 +476,7 @@ def construct_r_affected_by_a_migration(R_care: list, T: list, group_j: GROUP):
     R_result = []
     # times = []
     for rule in R_care:
-        for data_tuple in T:            
+        for data_tuple in T:       
             # st = time.time()
             if move_data_tuple_affect_a_rule(data_tuple, rule, group_j):
                 R_result.append(rule)

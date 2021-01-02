@@ -5,7 +5,7 @@ from Apriori import apriori_gen_rules
 from eval import eval_results
 import pickle, subprocess, time, pandas, sys, time
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     if len(sys.argv) > 3:
         abs_data_path, oka_abs_output_path, initial_rules_path, k = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
         log_to_file = True
