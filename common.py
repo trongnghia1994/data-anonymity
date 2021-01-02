@@ -476,7 +476,7 @@ def construct_r_affected_by_a_migration(R_care: list, T: list, group_j: GROUP):
     R_result = []
     # times = []
     for rule in R_care:
-        for data_tuple in T:       
+        for data_tuple in T:
             # st = time.time()
             if move_data_tuple_affect_a_rule(data_tuple, rule, group_j):
                 R_result.append(rule)

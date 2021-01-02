@@ -115,6 +115,43 @@ def cal_number_of_migrant_tuples(group_i, group_j, k=DESIRED_K):
     else:   # Group i is unsafe
         return group_length(group_i)
 
+
+def move_data_tuple_affect_a_rule_new(group_i: GROUP, group_j: GROUP, rule: RULE):
+    group_i_first_tuple = group_first_tuple(group_i)
+    group_j_first_tuple = group_first_tuple(group_j)
+    # Loop through quasi attributes of the data tuple then compare with the destination group (group j)'s first tuple
+    for index, attr in enumerate(QUASI_ATTRIBUTES):
+        source_group_quasi_attr_value = group_i_first_tuple.data.get(attr) if group_i_first_tuple else group_i.quasi_attributes_values[index] 
+        dst_group_quasi_attr_value = group_j_first_tuple.data.get(attr) if group_j_first_tuple else group_j.quasi_attributes_values[index]
+        if dst_group_quasi_attr_value != source_group_quasi_attr_value:
+            if rule_contains_attr_val(rule, attr, source_group_quasi_attr_value):
+                return True
+
+    return False
+
+
+def construct_r_affected_by_a_migration_new(R_care: list, group_i: GROUP, group_j: GROUP):
+    '''Construct the rule set affected
+    by a migration operation of tuples T from group i to group j'''
+    # times = []
+    cache_key = '.'.join(sorted([str(group_i.index), str(group_j.index)]))
+    if cache_key not in R_AFFECTED:
+        R_result = []
+        for rule in R_care:
+            # st = time.time()
+            if move_data_tuple_affect_a_rule_new(group_i, group_j, rule):
+                R_result.append(rule)
+
+        R_AFFECTED[cache_key] = R_result
+    else:
+        # print('HIT CACHE', cache_key)
+        R_result = R_AFFECTED[cache_key]
+                # times.append(float(time.time() - st))
+
+    # print('Total {} checks, sum {}'.format(len(times), sum(times)))    
+
+    return R_result
+
             
 # END OF POLICIES
 def apply_policies(R_care, group_i, group_j, k=DESIRED_K):
@@ -137,7 +174,8 @@ def apply_policies(R_care, group_i, group_j, k=DESIRED_K):
     if no_migrant_tuples > 0:
         # Check budget of rules affected
         tuples_consider_to_move = group_i.origin_tuples[:no_migrant_tuples]
-        R_affected = construct_r_affected_by_a_migration(R_care, [tuples_consider_to_move[0]], group_j)
+        # R_affected = construct_r_affected_by_a_migration(R_care, [tuples_consider_to_move[0]], group_j)
+        R_affected = construct_r_affected_by_a_migration_new(R_care, group_i, group_j)
         # R_affected = R_AFFECTED['{}_{}'.format(group_i.index, group_j.index)]
         budgets_all_rules_affected_positive = all(rule.budget > 0 for rule in R_affected)
         if budgets_all_rules_affected_positive:
@@ -170,15 +208,15 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, remaining_groups:
             factors = apply_policies(R_care, selected_group, group, k)
             # Check if the last migration is most useful
             if factors[-1]:
-                print('FIND THE MOST USEFUL: GROUP {}. BREAK!'.format(factors[2].index))
+                # print('FIND THE MOST USEFUL: GROUP {}. BREAK!'.format(factors[2].index))
                 resultsDataFrame = pandas.DataFrame([factors[:-1]], columns=['ableToMigrate', 'group_i', 'group_j', 'no_migrant_tuples', 'risk_reduction', 'time_elapsed', 'R_affected'])
-                print('RUN TIME TO FIND A GROUP TO PERFORM MIGRATION: {} seconds'.format(time.time() - st))
+                # print('RUN TIME TO FIND A GROUP TO PERFORM MIGRATION: {} seconds'.format(time.time() - st))
                 return resultsDataFrame.iloc[0]
             factors_reverse = apply_policies(R_care, group, selected_group, k)
             if factors_reverse[-1]:
-                print('FIND THE MOST USEFUL: GROUP {}. BREAK!'.format(factors[2].index))
+                # print('FIND THE MOST USEFUL: GROUP {}. BREAK!'.format(factors[2].index))
                 resultsDataFrame = pandas.DataFrame([factors_reverse[:-1]], columns=['ableToMigrate', 'group_i', 'group_j', 'no_migrant_tuples', 'risk_reduction', 'time_elapsed', 'R_affected'])
-                print('RUN TIME TO FIND A GROUP TO PERFORM MIGRATION: {} seconds'.format(time.time() - st))
+                # print('RUN TIME TO FIND A GROUP TO PERFORM MIGRATION: {} seconds'.format(time.time() - st))
                 return resultsDataFrame.iloc[0]
             # First element of factors and factors_reverse: able_to_migrate True/False
             if factors[0]:
@@ -193,7 +231,7 @@ def find_group_to_migrate(R_care: list, selected_group: GROUP, remaining_groups:
     # Get the best migration selection
     resultsDataFrame.sort_values(by=['risk_reduction', 'no_migrant_tuples'], ascending=[False, True], inplace=True)
     # print('COMPARISON RESULTS', resultsDataFrame)
-    print('RUN TIME TO FIND A GROUP TO PERFORM MIGRATION: {} seconds'.format(time.time() - st))
+    # print('RUN TIME TO FIND A GROUP TO PERFORM MIGRATION: {} seconds'.format(time.time() - st))
     return resultsDataFrame.iloc[0]
 
 
@@ -267,7 +305,7 @@ def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
     print('K =', k)
     print('NUMBER OF UNSAFE GROUPS AND SAFE GROUPS:', len(UG), len(SG))
     R_care = construct_r_care(R_initial)  # List of cared rules
-    R_care = R_care[:5]
+    # R_care = R_care[:5]
     for r in R_care:
         r.budget = rule_budget(r)
     print('LENGTH OF R_care', len(R_care))
@@ -276,6 +314,11 @@ def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
     # global R_AFFECTED
     # R_AFFECTED = build_rules_affected_by_perform_migration(R_care, GROUPS)
     # print('LENGTH R_AFFECTED', len(R_AFFECTED))
+    UM = [g for g in UG if group_length(g) == 1]
+    for um in UM:
+        UG.remove(um)
+        UG_SMALL.remove(um)
+
     SelG = None
     loop_iteration = 0
     while (len(UG) > 0) or (SelG):
@@ -283,7 +326,7 @@ def m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
         loop_iteration += 1
         print('START LOOP ITERATION {}. UG length: {}. SG length: {}. UM length: {}'.format(loop_iteration, len(UG), len(SG), len(UM)))
         if SelG is None:  # Randomly pick a group SelG from unsafe groups set
-            print('LOOP ITERATION {}. SelG is None, randomly pick one'.format(loop_iteration))   
+            # print('LOOP ITERATION {}. SelG is None, randomly pick one'.format(loop_iteration))   
             SelG = random.choice(UG)
             remove_group(SelG, UG)
         
