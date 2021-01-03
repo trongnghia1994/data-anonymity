@@ -9,7 +9,7 @@ def eval_results(R_initial, groups, output_file_name, total_time, other_algo=Fal
     if other_algo:
         print('***IGNORED PRINTING GROUPS AND EXPORT DATASET FOR OTHER ALGOS***')
     else:
-        pprint_groups(groups)
+        pprint_groups(groups, k)
         output_file_name = 'output/' + output_file_name
         export_dataset(groups, output_file_name)
 

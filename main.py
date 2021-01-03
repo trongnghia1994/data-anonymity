@@ -16,22 +16,22 @@ picked_rules_file = rules_data_file.split('.')[0] + '-picked.data'
 with open(picked_rules_file, 'wb') as f:
     pickle.dump(R_initial, f)
 
-# K_SET = [10]
-# for k in K_SET:
-#     abs_data_path = 'D:/data_anonymity/' + processed_ds
-#     run_m3ar_algo = ['python', 'm3ar.py', abs_data_path, picked_rules_file, str(k)]
-#     run_modified_algo = ['python', 'modified_m3ar.py', abs_data_path, picked_rules_file, str(k)]
-#     oka_abs_output_path = 'D:/data_anonymity/output/' + 'out_oka_' + 'k_' + str(k) + '_' + processed_ds.split('/')[-1]
-#     print('Input data file', abs_data_path, 'OKA output data file', oka_abs_output_path)
-#     run_oka_algo = ['python', 'oka.py', abs_data_path, oka_abs_output_path, picked_rules_file, str(k)]
+K_SET = [10]
+for k in K_SET:
+    abs_data_path = 'D:/data_anonymity/' + processed_ds
+    run_m3ar_algo = ['python', 'm3ar.py', abs_data_path, picked_rules_file, str(k)]
+    run_modified_algo = ['python', 'modified_m3ar.py', abs_data_path, picked_rules_file, str(k)]
+    # oka_abs_output_path = 'D:/data_anonymity/output/' + 'out_oka_' + 'k_' + str(k) + '_' + processed_ds.split('/')[-1]
+    # print('Input data file', abs_data_path, 'OKA output data file', oka_abs_output_path)
+    # run_oka_algo = ['python', 'oka.py', abs_data_path, oka_abs_output_path, picked_rules_file, str(k)]
 
-#     commands = [
-#         # run_m3ar_algo,
-#         # run_modified_algo,
-#         run_oka_algo,
-#     ]
-#     print(commands)
-#     for cmd in commands:
-#         subprocess.Popen(cmd)
+    commands = [
+        run_m3ar_algo,
+        run_modified_algo,
+        # run_oka_algo,
+    ]
+    print(commands)
+    for cmd in commands:
+        subprocess.Popen(cmd)
 
-#     time.sleep(1)
+    time.sleep(1)

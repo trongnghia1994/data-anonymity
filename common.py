@@ -94,9 +94,11 @@ def group_length(a_group: GROUP):
     return (len(a_group.origin_tuples) + len(a_group.received_tuples))
 
 
-def build_groups(dataset: pandas.DataFrame, R_care: list, quasi_attrs: list = QUASI_ATTRIBUTES, k=DESIRED_K):
+def build_groups(dataset: pandas.DataFrame, R_care: list, quasi_attrs: list = QUASI_ATTRIBUTES, k=DESIRED_K, divide_UG=True):
     '''Build safe groups and unsafe groups from the initial dataset'''
-    UG, UG_SMALL, UG_BIG, SG = [], [], [], []
+    UG, SG = [], []
+    if divide_UG:
+        UG_SMALL, UG_BIG = [], []
     DF_GROUPS = dataset.groupby(quasi_attrs)
     group_index = 0
     for _, df_group in DF_GROUPS:
@@ -113,20 +115,26 @@ def build_groups(dataset: pandas.DataFrame, R_care: list, quasi_attrs: list = QU
             if rule.quasi.intersection(group.quasi):
                 group.rules_support.append(rule)
 
-        if is_safe_group(group, k):
+        if is_safe_group(group, k): # Safe
             SG.append(group)
-        else:
-            if group_length(group) <= k /2:
-                UG_SMALL.append(group)
-            else:
-                UG_BIG.append(group)
+        else:   # Unsafe
+            if divide_UG:
+                if group_length(group) <= k /2:
+                    UG_SMALL.append(group)
+                else:
+                    UG_BIG.append(group)
 
             UG.append(group)
 
         group_index += 1
 
     GROUPS = SG + UG
-    return GROUPS, SG, UG, UG_SMALL, UG_BIG
+    if divide_UG:
+        results = GROUPS, SG, UG, UG_SMALL, UG_BIG
+    else:
+        results = GROUPS, SG, UG
+        
+    return results
 
 
 def group_first_tuple(a_group: GROUP):
@@ -228,7 +236,14 @@ def rules_metrics(r_before: list, r_after: list):
 
 
 def metrics_cavg(groups: list, k=DESIRED_K):
-    return sum(group_length(group) for group in groups) / len(groups) / k
+    no_real_groups = 0
+    sum_group_length = 0
+    for group in groups:
+        if group_length(group) > 0:
+            no_real_groups += 1
+            sum_group_length += group_length(group)
+
+    return sum_group_length / no_real_groups / k
 
 
 def metrics_cavg_raw(groups: list, k=DESIRED_K):
