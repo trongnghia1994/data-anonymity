@@ -319,7 +319,7 @@ def mod_m3ar_algo(D, R_initial, output_file_name, k=DESIRED_K):
                 # The next iteration we will choose another group to process
                 SelG = None
 
-            print('LOOP ITERATION {} FINISHES IN {} SECONDS'.format(loop_iteration, time.time() - st))
+            # print('LOOP ITERATION {} FINISHES IN {} SECONDS'.format(loop_iteration, time.time() - st))
 
     # print('TOTAL LOOPS: {}. UG length: {}. SG length: {}. UM length: {}\n'.format(loop_iteration, len(UG), len(SG), len(UM)))    
     # print('TOTAL NUMBER OF TUPLES IN SAFE GROUPS: {}'.format(sum(group_length(group) for group in GROUPS if group_length(group) >= k)))
@@ -357,7 +357,7 @@ if __name__ == '__main__':
         data_file_path = 'dataset/adult-prep.data'
         initial_rules_path = 'adult-prep-rules-picked.data'
         k = 10
-        log_to_file = True
+        log_to_file = False
 
     if log_to_file:
         sys.stdout = open("log/mod_m3ar_results_k_" + str(k) + ".log", "w")
@@ -374,7 +374,10 @@ if __name__ == '__main__':
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
     # print('R initial', R_initial)
-    output_file_name = 'out_mod_m3ar_k_' + str(k) + '_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
-    mod_m3ar_algo(D, R_initial, output_file_name, k)
+    for k in [25, 30]:
+        print('K=', k)
+        output_file_name = 'out_mod_m3ar_k_' + str(k) + '_' + data_file_path.split('/')[-1].split('.')[0] + '.data'
+        mod_m3ar_algo(D, R_initial, output_file_name, k)
+        print('========================================')
 
     sys.stdout.close()

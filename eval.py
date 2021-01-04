@@ -9,20 +9,20 @@ def eval_results(R_initial, groups, output_file_name, total_time, other_algo=Fal
     if other_algo:
         print('***IGNORED PRINTING GROUPS AND EXPORT DATASET FOR OTHER ALGOS***')
     else:
-        pprint_groups(groups, k)
+        # pprint_groups(groups, k)
         output_file_name = 'output/' + output_file_name
         export_dataset(groups, output_file_name)
 
     print('=========ORIGIN RULES=========')
     R_initial.sort(key=lambda rule: rule.hash_value)
-    for rule in R_initial:
-        pprint_rule(rule)
+    # for rule in R_initial:
+    #     pprint_rule(rule)
     print('==============================')
     print('=========RULES MINED ON MODIFIED DATASET=========')
     _, md_rules = apriori_gen_rules(output_file_name)
     md_rules.sort(key=lambda rule: rule.hash_value)    
-    for rule in md_rules:
-        pprint_rule(rule)
+    # for rule in md_rules:
+    #     pprint_rule(rule)
     print('==============================')
 
     print('=========METRICS=========')

@@ -10,9 +10,10 @@ if __name__ == '__main__':
         abs_data_path, oka_abs_output_path, initial_rules_path, k = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
         log_to_file = True
     else:
-        abs_data_path, initial_rules_path, k = 'D:/data_anonymity/dataset/adult-min-1000-prep.data', 'adult-min-1000-prep-rules-picked.data', 5
+        k = 10
+        abs_data_path, initial_rules_path = 'D:/data_anonymity/dataset/adult-prep.data', 'adult-prep-rules-picked.data'
         oka_abs_output_path = 'D:/data_anonymity/output/out_oka_k_{}_adult-prep.data'.format(k)
-        log_to_file = True
+        log_to_file = False
     
     if log_to_file:
         sys.stdout = open("log/oka_results_k_" + str(k) + ".log", "a")
@@ -21,13 +22,16 @@ if __name__ == '__main__':
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
 
-    start_time = time.time()
-    run_oka_algo = ['C:/Python27/python.exe', 'Clustering_based_K_Anon/anonymizer.py', 'a', 'oka', str(k), abs_data_path, oka_abs_output_path, '1' if log_to_file else '0']
-    subprocess.run(run_oka_algo)
+    for k in [25, 30]:
+        print('K=', k)
+        start_time = time.time()
+        run_oka_algo = ['C:/Python27/python.exe', 'Clustering_based_K_Anon/anonymizer.py', 'a', 'oka', str(k), abs_data_path, oka_abs_output_path, '1' if log_to_file else '0']
+        subprocess.run(run_oka_algo)
 
-    dataset = pandas.read_csv(oka_abs_output_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
-    GROUPS = dataset.groupby(QUASI_ATTRIBUTES)
+        dataset = pandas.read_csv(oka_abs_output_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
+        GROUPS = dataset.groupby(QUASI_ATTRIBUTES)
+        total_time = time.time() - start_time
 
-    eval_results(R_initial, GROUPS, oka_abs_output_path, start_time, other_algo=True)
+        eval_results(R_initial, GROUPS, oka_abs_output_path, total_time, other_algo=True, k=k)
 
     sys.stdout.close()
