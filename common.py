@@ -229,10 +229,10 @@ def rules_metrics(r_before: list, r_after: list):
     r_after_hash = [el.hash_value for el in r_after]
     r_before_hash_set = set(r_before_hash)
     r_after_hash_set = set(r_after_hash)
+    no_lost_rules = len(list(r_before_hash_set - r_after_hash_set)) / len(r_before)
     no_new_rules = len(list(r_after_hash_set - r_before_hash_set)) / len(r_before)
-    no_loss_rules = len(list(r_before_hash_set - r_after_hash_set)) / len(r_before)
     no_diff_rules = (len(list(r_after_hash_set - r_before_hash_set)) + len(list(r_before_hash_set - r_after_hash_set))) / len(r_before)
-    return no_new_rules, no_loss_rules, no_diff_rules    
+    return no_new_rules, no_lost_rules, no_diff_rules
 
 
 def metrics_cavg(groups: list, k=DESIRED_K):

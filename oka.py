@@ -22,7 +22,7 @@ if __name__ == '__main__':
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
 
-    for k in [25, 30]:
+    for k in [25]:
         print('K=', k)
         start_time = time.time()
         run_oka_algo = ['C:/Python27/python.exe', 'Clustering_based_K_Anon/anonymizer.py', 'a', 'oka', str(k), abs_data_path, oka_abs_output_path, '1' if log_to_file else '0']

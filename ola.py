@@ -7,24 +7,6 @@ from crowds.kanonymity.information_loss import dm_star_loss, prec_loss
 
 from eval import eval_results
 
-# Read list of rules from binary pickled file
-# with open('initial_rules.data', 'rb') as f:
-#     data = pickle.load(f)
-#     print(data)
-
-def loss_fn(node):
-    return 0.0
-
-
-def first_gen(value):
-    return '*'
-
-def second_gen(value):
-    return '*'
-
-
-new_rule = GenRule([first_gen, second_gen])
-ruleset = {'marital-status': new_rule}
 
 def generalize_age(value):
     min = int(value / 10)
@@ -41,6 +23,7 @@ def generalize_workclass(value):
         return 'gov'
     if value in ['Without-pay', 'Never-worked']:
         return 'not-work'
+
 
 def generalize_marital_status(value):
     if value in ['Never-married']:
@@ -72,7 +55,8 @@ if __name__ == '__main__':
         abs_data_path, ola_abs_output_path, initial_rules_path, k = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
         log_to_file = True
     else:
-        abs_data_path, initial_rules_path, k = 'D:/data_anonymity/dataset/adult-min-1000-prep.data', 'adult-min-1000-prep-rules-picked.data', 10
+        abs_data_path, initial_rules_path = 'D:/data_anonymity/dataset/adult-min-1000-prep.data', 'adult-min-1000-prep-rules-picked.data'
+        k = 10
         ola_abs_output_path = 'D:/data_anonymity/output/out_ola_k_{}_adult-prep.data'.format(k)
         log_to_file = True
     
@@ -87,15 +71,17 @@ if __name__ == '__main__':
     df = pandas.read_csv(DATA_FILE_PATH, names=RETAINED_DATA_COLUMNS,
                     index_col=False, skipinitialspace=True)
 
-    anonymous_df = ola.anonymize(df, k=10, info_loss=prec_loss, generalization_rules=generalization_rules)
+    anonymous_df = ola.anonymize(df, k=k, info_loss=prec_loss, generalization_rules=generalization_rules)
     out_file_path = 'output/out_ola_k_{}_adult-prep.data'.format(k)
     # Export dataset
     anonymous_df[0].fillna('*', inplace=True)
     anonymous_df[0].to_csv(ola_abs_output_path, index=False, header=False)
 
     dataset = pandas.read_csv(ola_abs_output_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
-    GROUPS = dataset.groupby(QUASI_ATTRIBUTES)    
+    GROUPS = dataset.groupby(QUASI_ATTRIBUTES)
 
-    eval_results(R_initial, GROUPS, ola_abs_output_path, start_time, other_algo=True)
+    total_time = time.time() - start_time
+
+    eval_results(R_initial, GROUPS, ola_abs_output_path, total_time, other_algo=True)
 
     sys.stdout.close()
