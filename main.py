@@ -21,9 +21,9 @@ for k in K_SET:
     abs_data_path = 'D:/data_anonymity/' + processed_ds
     run_m3ar_algo = ['python', 'm3ar.py', abs_data_path, picked_rules_file, str(k)]
     run_modified_algo = ['python', 'modified_m3ar.py', abs_data_path, picked_rules_file, str(k)]
-    # oka_abs_output_path = 'D:/data_anonymity/output/' + 'out_oka_' + 'k_' + str(k) + '_' + processed_ds.split('/')[-1]
-    # print('Input data file', abs_data_path, 'OKA output data file', oka_abs_output_path)
-    # run_oka_algo = ['python', 'oka.py', abs_data_path, oka_abs_output_path, picked_rules_file, str(k)]
+    oka_abs_output_path = 'D:/data_anonymity/output/' + 'out_oka_' + 'k_' + str(k) + '_' + processed_ds.split('/')[-1]
+    print('Input data file', abs_data_path, 'OKA output data file', oka_abs_output_path)
+    run_oka_algo = ['python', 'oka.py', abs_data_path, oka_abs_output_path, picked_rules_file, str(k)]
 
     commands = [
         run_m3ar_algo,

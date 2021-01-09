@@ -3,6 +3,7 @@ from ar_mining import cal_supp_conf
 from preprocess import preprocess
 from Apriori import apriori_gen_rules
 from eval import eval_results
+from oka_py3.anonymizer import run_oka_with_adult_ds
 import pickle, subprocess, time, pandas, sys, time
 
 if __name__ == '__main__':
@@ -22,11 +23,11 @@ if __name__ == '__main__':
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
 
-    for k in [25]:
+    for k in [5]:
         print('K=', k)
         start_time = time.time()
-        run_oka_algo = ['C:/Python27/python.exe', 'Clustering_based_K_Anon/anonymizer.py', 'a', 'oka', str(k), abs_data_path, oka_abs_output_path, '1' if log_to_file else '0']
-        subprocess.run(run_oka_algo)
+        output_file_name = 'out_oka_k_' + str(k) + '_' + abs_data_path.split('/')[-1].split('.')[0] + '.data'
+        run_oka_with_adult_ds(abs_data_path, k, output_file_name)
 
         dataset = pandas.read_csv(oka_abs_output_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
         GROUPS = dataset.groupby(QUASI_ATTRIBUTES)
