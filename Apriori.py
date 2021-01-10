@@ -8,6 +8,7 @@ import math
 import itertools
 import json
 import pickle
+import traceback
 from itertools import combinations
 from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, RULE, RULE_ITEM, MIN_SUP, MIN_CONF, gen_rule_hash_value, QUASI_ATTRIBUTES
 numeric_columns = ["capital-gain", "hours-per-week"]
@@ -203,7 +204,7 @@ def apriori_gen_rules(input_ds=DATA_FILE_PATH):
         category.columns = ['converted_'+column]
         adult = pd.concat([adult, category], axis=1)
         adult["converted_"+column] = column + "_" + adult["converted_"+column].astype(str).replace(" ", "")
-        adult = adult.drop(column, axis=1)
+        adult = adult.drop(column, axis=1)        
 
 
     # Process remaining columns
