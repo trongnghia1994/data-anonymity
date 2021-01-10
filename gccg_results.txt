@@ -1,0 +1,105 @@
+==============================
+=========METRICS=========
+EVALUATED AT 10/01/2021, 17:34:28
+K=5
+=========RULES MINED ON MODIFIED DATASET=========
+((-0.1-9999.9],Private) => (United-States) - Support: 17351, Confidence: 0.794568851032651, Budget: 0, LHS Support: 0, Hash: 039abe45d8df559236a95a3f2049c981
+((-0.1-9999.9],White) => (Male) - Support: 16874, Confidence: 0.7009803921568627, Budget: 0, LHS Support: 0, Hash: 0b132f63a58bc84af62d43a234ea5e78
+((-0.1-9999.9],Male) => (United-States) - Support: 15881, Confidence: 0.8091404697610435, Budget: 0, LHS
+Support: 0, Hash: 14e94e3d235de18b29c35fcd2a62d0fd
+((-0.1-9999.9]) => (White) - Support: 24072, Confidence: 0.8177463736114414, Budget: 0, LHS Support: 0, Hash: 18aa34cfa003452c40d8fe1bf242c253
+(White) => (Male) - Support: 17404, Confidence: 0.7043587356833543, Budget: 0, LHS Support: 0, Hash: 18fdef940dd3907eddcd194c5bc3cc9a
+(White) => ((-0.1-9999.9],Private) - Support: 17798, Confidence: 0.72030434254725, Budget: 0, LHS Support: 0, Hash: 1ee555048fa7589cf686cdaa78f7bc19
+(Male) => ((-0.1-9999.9]) - Support: 19627, Confidence: 0.9704806170886076, Budget: 0, LHS Support: 0, Hash: 21427eb85ab9167c323958793e0fc7cc
+((30.4-40.2]) => ((-0.1-9999.9]) - Support: 16322, Confidence: 0.9840829615338237, Budget: 0, LHS Support: 0, Hash: 2a272177d75606d83879180a567f8ca6
+(Private) => ((-0.1-9999.9]) - Support: 21837, Confidence: 0.9798528223997128, Budget: 0, LHS Support: 0, Hash: 2a9085d228de31eb3dcd6be6a6aa7922
+((-0.1-9999.9]) => (United-States) - Support: 23608, Confidence: 0.8019838978156741, Budget: 0, LHS Support: 0, Hash: 33943fc322d91a668b4229366e30dc3a
+LENGTH OF R_INITIAL: 90
+RUN TIME: 612.8178594112396 seconds
+Number of groups: 3009
+Number of unsafe groups: 0
+Number of tuples: 30169
+CAVG: 2.005250913924892
+Number of initial rules and rules on modified dataset: 90 50
+Number of new rules: 0.0
+Number of lost rules: 0.4444444444444444
+Number of diff rules: 0.4444444444444444
+
+
+
+K=10
+((-0.1-9999.9],Private) => (United-States) - Support: 15816, Confidence: 0.7242753125429318, Budget: 0, LHS Support: 0, Hash: 039abe45d8df559236a95a3f2049c981
+((-0.1-9999.9],White) => (Male) - Support: 15803, Confidence: 0.6848240596290518, Budget: 0, LHS Support: 0, Hash: 0b132f63a58bc84af62d43a234ea5e78
+((-0.1-9999.9]) => (White) - Support: 23076, Confidence: 0.7839114040153549, Budget: 0, LHS Support: 0, Hash: 18aa34cfa003452c40d8fe1bf242c253
+(White) => (Male) - Support: 16319, Confidence: 0.6885944554622558, Budget: 0, LHS Support: 0, Hash: 18fdef940dd3907eddcd194c5bc3cc9a
+(White) => ((-0.1-9999.9],Private) - Support: 17035, Confidence: 0.7188067007046711, Budget: 0, LHS Support: 0, Hash: 1ee555048fa7589cf686cdaa78f7bc19
+(Male) => ((-0.1-9999.9]) - Support: 19450, Confidence: 0.9706073157343181, Budget: 0, LHS Support: 0, Hash: 21427eb85ab9167c323958793e0fc7cc
+((30.4-40.2]) => ((-0.1-9999.9]) - Support: 16322, Confidence: 0.9840829615338237, Budget: 0, LHS Support: 0, Hash: 2a272177d75606d83879180a567f8ca6
+(Private) => ((-0.1-9999.9]) - Support: 21837, Confidence: 0.9798528223997128, Budget: 0, LHS Support: 0, Hash: 2a9085d228de31eb3dcd6be6a6aa7922
+((-0.1-9999.9]) => (United-States) - Support: 21646, Confidence: 0.7353330842137447, Budget: 0, LHS Support: 0, Hash: 33943fc322d91a668b4229366e30dc3a
+(Private) => (White) - Support: 17406, Confidence: 0.7810284483532263, Budget: 0, LHS Support: 0, Hash: 357f4500f1b8dec1db625eef0e23d4b7
+LENGTH OF R_INITIAL: 90
+RUN TIME: 653.1987547874451 seconds
+Number of groups: 1959
+Number of unsafe groups: 0
+Number of tuples: 30169
+CAVG: 1.5400204185809085
+Number of initial rules and rules on modified dataset: 90 44
+Number of new rules: 0.0
+Number of lost rules: 0.5111111111111111
+Number of diff rules: 0.5111111111111111
+
+
+
+K=25
+EVALUATED AT 10/01/2021, 17:40:28
+=========RULES MINED ON MODIFIED DATASET=========
+((-0.1-9999.9]) => (White) - Support: 20929, Confidence: 0.7109759826069233, Budget: 0, LHS Support: 0, Hash: 18aa34cfa003452c40d8fe1bf242c253
+(White) => ((-0.1-9999.9],Private) - Support: 15472, Confidence: 0.7198287894296083, Budget: 0, LHS Support: 0, Hash: 1ee555048fa7589cf686cdaa78f7bc19
+(Male) => ((-0.1-9999.9]) - Support: 19068, Confidence: 0.9706780696395846, Budget: 0, LHS Support: 0, Hash: 21427eb85ab9167c323958793e0fc7cc
+((30.4-40.2]) => ((-0.1-9999.9]) - Support: 16322, Confidence: 0.9840829615338237, Budget: 0, LHS Support: 0, Hash: 2a272177d75606d83879180a567f8ca6
+(Private) => ((-0.1-9999.9]) - Support: 21837, Confidence: 0.9798528223997128, Budget: 0, LHS Support: 0, Hash: 2a9085d228de31eb3dcd6be6a6aa7922
+((-0.1-9999.9]) => (United-States) - Support: 16709, Confidence: 0.5676189829126609, Budget: 0, LHS Support: 0, Hash: 33943fc322d91a668b4229366e30dc3a
+(Private) => (White) - Support: 15811, Confidence: 0.709458853091627, Budget: 0, LHS Support: 0, Hash: 357f4500f1b8dec1db625eef0e23d4b7
+(United-States) => ((-0.1-9999.9]) - Support: 16709, Confidence: 0.9732075251907508, Budget: 0, LHS Support: 0, Hash: 3e3ebb881c47e5f7236564a92fef7297
+((-0.1-9999.9],Private) => (White) - Support: 15472, Confidence: 0.7085222329074506, Budget: 0, LHS Support: 0, Hash: 57f91414b6f91e6e3c1fc3d701a233d5
+((-0.1-9999.9]) => (Private) - Support: 21837, Confidence: 0.7418215171382954, Budget: 0, LHS Support: 0, Hash: 8ed3ed086db5cf0602ad649466c1dd8e
+LENGTH OF R_INITIAL: 90
+RUN TIME: 585.2442755699158 seconds
+Number of groups: 1018
+Number of unsafe groups: 0
+Number of tuples: 30169
+CAVG: 1.1854223968565816
+Number of initial rules and rules on modified dataset: 90 18
+Number of new rules: 0.0
+Number of lost rules: 0.8
+Number of diff rules: 0.8
+
+
+
+K=30
+((-0.1-9999.9]) => (White) - Support: 21093, Confidence: 0.7165472025002548, Budget: 0, LHS Support: 0, Hash: 18aa34cfa003452c40d8fe1bf242c253
+(White) => ((-0.1-9999.9],Private) - Support: 15415, Confidence: 0.7110567830619493, Budget: 0, LHS Support: 0, Hash: 1ee555048fa7589cf686cdaa78f7bc19
+(Male) => ((-0.1-9999.9]) - Support: 18895, Confidence: 0.9710159823218049, Budget: 0, LHS Support: 0, Hash: 21427eb85ab9167c323958793e0fc7cc
+((30.4-40.2]) => ((-0.1-9999.9]) - Support: 16322, Confidence: 0.9840829615338237, Budget: 0, LHS Support: 0, Hash: 2a272177d75606d83879180a567f8ca6
+(Private) => ((-0.1-9999.9]) - Support: 21837, Confidence: 0.9798528223997128, Budget: 0, LHS Support: 0, Hash: 2a9085d228de31eb3dcd6be6a6aa7922
+(Private) => (White) - Support: 15768, Confidence: 0.7075293906488378, Budget: 0, LHS Support: 0, Hash: 357f4500f1b8dec1db625eef0e23d4b7
+((-0.1-9999.9],Private) => (White) - Support: 15415, Confidence: 0.7059119842469204, Budget: 0, LHS Support: 0, Hash: 57f91414b6f91e6e3c1fc3d701a233d5
+((-0.1-9999.9]) => (Private) - Support: 21837, Confidence: 0.7418215171382954, Budget: 0, LHS Support: 0, Hash: 8ed3ed086db5cf0602ad649466c1dd8e
+(White,Private) => ((-0.1-9999.9]) - Support: 15415, Confidence: 0.9776128868594622, Budget: 0, LHS Support: 0, Hash: 9240c617da30fa72cc411a5ff7748088
+((-0.1-9999.9]) => (White,Private) - Support: 15415, Confidence: 0.5236606991201549, Budget: 0, LHS Support: 0, Hash: 95ef1eb49d2c1b768a14dd4633069e27
+
+==============================
+=========METRICS=========
+EVALUATED AT 10/01/2021, 17:49:53
+K=30
+LENGTH OF R_INITIAL: 90
+RUN TIME: 560.5751881599426 seconds
+Number of groups: 885
+Number of unsafe groups: 0
+Number of tuples: 30169
+CAVG: 1.1363088512241053
+Number of initial rules and rules on modified dataset: 90 16
+Number of new rules: 0.0
+Number of lost rules: 0.8222222222222222
+Number of diff rules: 0.8222222222222222

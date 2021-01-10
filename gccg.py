@@ -252,7 +252,7 @@ def find_cluster_neighbors(anchor_tuple: pandas.Series, dataset: pandas.DataFram
     return result
 
 
-def gccg(dataset: pandas.DataFrame, k: int):
+def gccg(dataset: pandas.DataFrame, k: int, gccg_output_path: str):
     total_size = dataset.shape[0]
     attrs_freq = build_attrs_freq(dataset, total_size)
 
@@ -278,18 +278,18 @@ def gccg(dataset: pandas.DataFrame, k: int):
     st0 = time.time()
     for i in range(num_of_groups):
         st = time.time()
-        picked_centroid_tuple = dataset.iloc[0]      
+        picked_centroid_tuple = dataset.iloc[0]   
         dataset = dataset[1:]
         # Find k-1 neighbors for picked_centroid_tuple then remove them from the dataset
         result = find_cluster_neighbors(picked_centroid_tuple, dataset, k, CAT_COMMON_ANCESTOR_CACHE)
         result = result.append(picked_centroid_tuple)
         clusters.append(result)
 
-        if i % 100 == 0:
-            print('Remaining dataset length: {}'.format(dataset.shape[0]))
-            print('Time elapsed: {} seconds'.format(time.time() - st))
+        # if i % 100 == 0:
+        #     print('Remaining dataset length: {}'.format(dataset.shape[0]))
+        #     print('Time elapsed: {} seconds'.format(time.time() - st))
 
-    print('Total time: {} seconds'.format(time.time() - st0))
+    # print('Total time: {} seconds'.format(time.time() - st0))
     # 3. Generalization and generate the result
     result_df = pandas.DataFrame()
     for cluster in clusters:
@@ -327,8 +327,8 @@ if __name__ == '__main__':
         log_to_file = True
     else:
         k = 10
-        abs_data_path, initial_rules_path = 'D:/data_anonymity/dataset/adult-min-1000-prep.data', 'adult-min-1000-prep-rules-picked.data'
-        gccg_output_path = 'D:/data_anonymity/output/out_gccg_k_{}_adult-min-1000-prep.data'.format(k)
+        abs_data_path, initial_rules_path = 'D:/data_anonymity/dataset/adult-prep.data', 'adult-prep-rules-picked.data'
+        gccg_output_path = 'D:/data_anonymity/output/out_gccg_k_{}_adult-prep.data'.format(k)
         log_to_file = False
     
     if log_to_file:
@@ -338,17 +338,18 @@ if __name__ == '__main__':
     with open(initial_rules_path, 'rb') as f:
         R_initial = pickle.load(f)
 
-    for k in [10]:
+    for k in [25, 30]:
         print('K=', k)
         start_time = time.time()
 
-        output_file_name = 'out_gccg_k_' + str(k) + '_' + abs_data_path.split('/')[-1].split('.')[0] + '.data'
+        # output_file_name = 'out_gccg_k_' + str(k) + '_' + abs_data_path.split('/')[-1].split('.')[0] + '.data'
+        gccg_output_path = 'D:/data_anonymity/output/out_gccg_k_{}_adult-prep.data'.format(k)
         dataset = pandas.read_csv(abs_data_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
-        gccg(dataset, k)
+        gccg(dataset, k, gccg_output_path)
+        total_time = time.time() - start_time
 
         dataset = pandas.read_csv(gccg_output_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)        
-        GROUPS = dataset.groupby(QUASI_ATTRIBUTES)
-        total_time = time.time() - start_time
+        GROUPS = dataset.groupby(QUASI_ATTRIBUTES)      
 
         eval_results(R_initial, GROUPS, gccg_output_path, total_time, other_algo=True, k=k)
 

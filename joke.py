@@ -179,7 +179,8 @@ if __name__ == '__main__':
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
     dataset_length = D.shape[0]
     print('DATASET LENGTH=', dataset_length)
-    print(D['age'].max(), D['age'].min())
+    # print(D['age'].max(), D['age'].min())
+    print(D['workclass'].value_counts())
     # GROUPS, SG, UG, UG_SMALL, UG_BIG = build_groups(D, k=10)
     # groups_col = mydb["groups"]
     # for group in GROUPS:
