@@ -113,17 +113,17 @@ from common import DATA_FILE_PATH, RETAINED_DATA_COLUMNS, QUASI_ATTRIBUTES, CAT_
 #         pickle.dump(data, f)
 
 
-from multiprocessing import Pool
-import os, pymongo
+# from multiprocessing import Pool
+# import os, pymongo
 
-k = 10
+# k = 10
 # A dataset reaches k-anonymity if total risks of all groups equals to 0
 # A Member Migration operation g(i)-T-g(j) is valuable when the risk of data is decreased after performing that Member Migration operation.
 
 
-myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-mydb = myclient["data_anonymity"]
-mycol = mydb["rules_affected"]
+# myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+# mydb = myclient["data_anonymity"]
+# mycol = mydb["rules_affected"]
 
 
 def worker(data):
@@ -162,24 +162,25 @@ def worker(data):
     # with open(file_name, 'wb') as f:
     #     pickle.dump(r, f)    
 
-from os import listdir
-from os.path import isfile, join
-R_affected = {}
-def recover_r_affected(path):
-    for f in listdir(path):
-        fp = join(path, f)
-        print('fp', fp)
-        with open(fp,'rb') as f:
-            R_affected.update(pickle.load(f))
+# from os import listdir
+# from os.path import isfile, join
+# R_affected = {}
+# def recover_r_affected(path):
+#     for f in listdir(path):
+#         fp = join(path, f)
+#         print('fp', fp)
+#         with open(fp,'rb') as f:
+#             R_affected.update(pickle.load(f))
 
 
 if __name__ == '__main__':
     data_file_path = 'dataset/adult-prep.data'
-    initial_rules_path = 'adult-prep-rules-picked.data'    
+    # initial_rules_path = 'adult-prep-rules-picked.data'    
     D = pandas.read_csv(data_file_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
     dataset_length = D.shape[0]
     print('DATASET LENGTH=', dataset_length)
-    GROUPS, SG, UG, UG_SMALL, UG_BIG = build_groups(D, k=10)
+    print(D['age'].max(), D['age'].min())
+    # GROUPS, SG, UG, UG_SMALL, UG_BIG = build_groups(D, k=10)
     # groups_col = mydb["groups"]
     # for group in GROUPS:
     #     groups_col.insert_one({"_id": group.index, "data": pickle.dumps(group)})
@@ -206,15 +207,19 @@ if __name__ == '__main__':
     # rules = pickle.loads(mycol.find_one({"_id": "1042_1071"})['r'])
     # print(rules)
 
-    GROUPS_LENGTH = {}
-    for group in GROUPS:
-        gr_len = group_length(group)
-        if gr_len not in GROUPS_LENGTH:
-            GROUPS_LENGTH[gr_len] = 1
-        else:
-            GROUPS_LENGTH[gr_len] += 1
+    # GROUPS_LENGTH = {}
+    # for group in GROUPS:
+    #     gr_len = group_length(group)
+    #     if gr_len not in GROUPS_LENGTH:
+    #         GROUPS_LENGTH[gr_len] = 1
+    #     else:
+    #         GROUPS_LENGTH[gr_len] += 1
 
-    print('Lengths', len(UG), len(SG), len(UG_SMALL), len(UG_BIG))
-    print('Group length stats')
-    for key in sorted(GROUPS_LENGTH):
-        print('Length={}'.format(key), ':', GROUPS_LENGTH[key])
+    # print('Lengths', len(UG), len(SG), len(UG_SMALL), len(UG_BIG))
+    # print('Group length stats')
+    # for key in sorted(GROUPS_LENGTH):
+    #     print('Length={}'.format(key), ':', GROUPS_LENGTH[key])
+    # from pprint import pprint
+    # with open('D:/data_anonymity/oka_py3/data/adult_age_static.pickle', 'rb') as f:
+    #     data = pickle.load(f)
+    #     pprint(data[0])

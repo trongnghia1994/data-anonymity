@@ -19,10 +19,15 @@ AGES = [(1, 10), (11, 20), (21, 30), (31, 40), (41, 50), (51, 60), (61, 70), (71
 #     raise Exception('Failed')
 
 def generalize_age(value):
-    if value <= 50:
-        return 'young'
-    else:
-        return 'old'
+    if 0 <= value <= 25:
+        return '[0-25]'
+    if 26 <= value <= 50:
+        return '[26-50]'
+    if 51 <= value <= 75:
+        return '[51-75]'
+    if 76 <= value <= 100:
+        return '[76-100]'
+
 
 def generalize_workclass(value):
     if value in ['Private']:
@@ -65,7 +70,7 @@ generalization_rules = {
     'marital-status': GenRule([generalize_marital_status]),
     'native-country': GenRule([]),
     'race': GenRule([]),
-    'education': GenRule([]),    
+    'education': GenRule([]),
 }    
 
 
@@ -74,7 +79,7 @@ if __name__ == '__main__':
         abs_data_path, ola_abs_output_path, initial_rules_path, k = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
         log_to_file = True
     else:
-        abs_data_path, initial_rules_path = 'D:/data_anonymity/dataset/adult-min-1000-prep.data', 'adult-min-1000-prep-rules-picked.data'
+        abs_data_path, initial_rules_path = 'D:/data_anonymity/dataset/adult-prep.data', 'adult-prep-rules-picked.data'
         k = 10
         ola_abs_output_path = 'D:/data_anonymity/output/out_ola_k_{}_adult-prep.data'.format(k)
         log_to_file = False
@@ -98,8 +103,6 @@ if __name__ == '__main__':
 
     dataset = pandas.read_csv(ola_abs_output_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
     GROUPS = dataset.groupby(QUASI_ATTRIBUTES)
-    for _, group in GROUPS:
-        print(group)
 
     total_time = time.time() - start_time
 

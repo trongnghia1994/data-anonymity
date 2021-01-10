@@ -41,7 +41,7 @@ def eval_results(R_initial, groups, output_file_name, total_time, other_algo=Fal
         print('Number of tuples:', sum(group_length(gr) for gr in groups))
         print('CAVG:', metrics_cavg(groups, k))
 
-    print(len(R_initial), len(md_rules))
+    print('Number of initial rules and rules on modified dataset:', len(R_initial), len(md_rules))
     no_new_rules, no_lost_rules, no_diff_rules = rules_metrics(R_initial, md_rules)
     print('Number of new rules:', no_new_rules)
     print('Number of lost rules:', no_lost_rules)

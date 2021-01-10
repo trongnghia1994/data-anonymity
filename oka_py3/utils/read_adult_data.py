@@ -31,7 +31,7 @@ ATT_NAMES = RETAINED_DATA_COLUMNS = ['age', 'sex', 'marital-status', 'native-cou
 QI_INDEX = [0, 1, 2, 3, 4, 5]
 IS_CAT = [False, True, True, True, True, True]
 SA_INDEX = [6, 7, 8]
-DATASET_PATH = 'Clustering_based_K_Anon/data/adult-prep.data'
+DATASET_PATH = 'dataset/adult-prep.data'
 
 __DEBUG = False
 
@@ -75,7 +75,7 @@ def read_data(ds_path=DATASET_PATH):
     # pickle numeric attributes and get NumRange
     for i in range(QI_num):
         if IS_CAT[i] is False:
-            static_file = open('Clustering_based_K_Anon/data/adult_' + ATT_NAMES[QI_INDEX[i]] + '_static.pickle', 'wb')
+            static_file = open('oka_py3/data/adult_' + ATT_NAMES[QI_INDEX[i]] + '_static.pickle', 'wb')
             sort_value = list(numeric_dict[i].keys())
             sort_value.sort(key=cmp_to_key(cmp_str))
             pickle.dump((numeric_dict[i], sort_value), static_file)
@@ -104,7 +104,7 @@ def read_pickle_file(att_name):
     return numrange object
     """
     try:
-        static_file = open('Clustering_based_K_Anon/data/adult_' + att_name + '_static.pickle', 'rb')
+        static_file = open('oka_py3/data/adult_' + att_name + '_static.pickle', 'rb')
         (numeric_dict, sort_value) = pickle.load(static_file)
     except:
         print("Pickle file not exists!!")
@@ -118,7 +118,7 @@ def read_tree_file(treename):
     """
     leaf_to_path = {}
     att_tree = {}
-    prefix = 'Clustering_based_K_Anon/data/adult_'
+    prefix = 'oka_py3/data/adult_'
     postfix = ".txt"
     treefile = open(prefix + treename + postfix, 'rU')
     att_tree['*'] = GenTree('*')    

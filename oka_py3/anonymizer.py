@@ -153,12 +153,11 @@ def get_result_qi(att_trees, data, type_alg, k=DEFAULT_K):
 
 
 # ONLY CARE THIS
-def run_oka_with_adult_ds(input_ds_path, k, output_ds_path):
+def run_oka_with_adult_ds(input_ds_path, k, output_ds_path, log_to_file=True):
     DATA = read_adult(input_ds_path)
     ATT_TREES = read_adult_tree()
     TYPE_ALG = 'oka'
-    LOG_TO_FILE = '1'
-    if LOG_TO_FILE == '1':
+    if log_to_file:
         sys.stdout = open("log/oka_results_k_" + str(k) + ".log", "w")
     get_result_one(ATT_TREES, DATA, TYPE_ALG, k, output_ds_path)
 

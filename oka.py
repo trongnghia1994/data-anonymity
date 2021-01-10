@@ -26,8 +26,9 @@ if __name__ == '__main__':
     for k in [5]:
         print('K=', k)
         start_time = time.time()
+
         output_file_name = 'out_oka_k_' + str(k) + '_' + abs_data_path.split('/')[-1].split('.')[0] + '.data'
-        run_oka_with_adult_ds(abs_data_path, k, output_file_name)
+        run_oka_with_adult_ds(abs_data_path, k, output_file_name, log_to_file)
 
         dataset = pandas.read_csv(oka_abs_output_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
         GROUPS = dataset.groupby(QUASI_ATTRIBUTES)

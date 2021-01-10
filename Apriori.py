@@ -124,7 +124,16 @@ def apriori(dict_table, support):
 # Initialization
 ################
 
-def gen_rules(item_set, dict_table, min_conf, output_file):
+
+def rule_already_in_result(rule: RULE, result: list):
+    for r in result:
+        if r.hash_value == rule.hash_value:
+            return True
+
+    return False
+
+
+def gen_rules(item_set, dict_table, min_conf, output_file, result_hash):
     result = []
     items = item_set['itemset']
     rule_index = 0
@@ -138,7 +147,11 @@ def gen_rules(item_set, dict_table, min_conf, output_file):
                 rule = RULE(index=rule_index, A=[], B=[], support=0, confidence=0, budget=0)
                 # print(lhs, '===>', rhs, 'support=', item_set['support'], 'confidence=', rule_confidence)                    
                 for rule_item in lhs:
-                    attr, value = rule_item.split('_')                    
+                    attr, value = rule_item.split('_')
+                    # If this attribute value contains the most general value => Discard it
+                    if value == '*':
+                        continue
+
                     if attr in numeric_columns: # Replace the , with -
                         value = value.replace(' ', '')
                         comma_pos = value.rfind(',')
@@ -150,6 +163,10 @@ def gen_rules(item_set, dict_table, min_conf, output_file):
 
                 for rule_item in rhs:
                     attr, value = rule_item.split('_')
+                    # If this attribute value contains the most general value => Discard it
+                    if value == '*':
+                        continue
+
                     if attr in numeric_columns: # Replace the , with -
                         value = value.replace(' ', '')
                         comma_pos = value.rfind(',')
@@ -158,13 +175,16 @@ def gen_rules(item_set, dict_table, min_conf, output_file):
                     rule.B.append(RULE_ITEM(value, attr))
                     if attr in QUASI_ATTRIBUTES:
                         rule.quasi.add('{}_{}'.format(attr, value))
-
-                rule.support = item_set['support']
-                rule.confidence = rule_confidence
-                rule.hash_value = gen_rule_hash_value(rule)
-                rule.index = rule_index
-                result.append(rule)
-                rule_index += 1
+                
+                rule_hash = gen_rule_hash_value(rule)                
+                if rule_hash not in result_hash and rule.A and rule.B:
+                    result_hash.add(rule_hash)
+                    rule.support = item_set['support']
+                    rule.confidence = rule_confidence
+                    rule.hash_value = rule_hash
+                    rule.index = rule_index
+                    result.append(rule)
+                    rule_index += 1
 
     return result
 
@@ -208,9 +228,10 @@ def apriori_gen_rules(input_ds=DATA_FILE_PATH):
     # print(json.dumps(C, indent=4))
     # Process from the itemsets with length = 2
     all_rules = []
+    result_hash = set()
     for item_set_group in C[1:]:
         for item_set in item_set_group:
-            all_rules.extend(gen_rules(item_set, dict_table, MIN_CONF, output_file))
+            all_rules.extend(gen_rules(item_set, dict_table, MIN_CONF, output_file, result_hash))
 
     with open(output_file, 'wb') as f:
         pickle.dump(all_rules, f)
