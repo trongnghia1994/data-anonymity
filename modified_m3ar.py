@@ -354,8 +354,8 @@ if __name__ == '__main__':
         data_file_path, initial_rules_path, k = sys.argv[1], sys.argv[2], int(sys.argv[3])
         log_to_file = True
     else:
-        data_file_path = 'dataset/adult-prep.data'
-        initial_rules_path = 'adult-prep-rules-picked.data'
+        data_file_path = 'dataset/adult-min-100-prep.data'
+        initial_rules_path = 'adult-min-100-prep-rules-picked.data'
         k = 10
         log_to_file = False
 
