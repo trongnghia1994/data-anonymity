@@ -12,8 +12,8 @@ if __name__ == '__main__':
         log_to_file = True
     else:
         k = 10
-        abs_data_path, initial_rules_path = 'D:/data_anonymity/dataset/adult-prep.data', 'adult-prep-rules-picked.data'
-        oka_abs_output_path = 'D:/data_anonymity/output/out_oka_k_{}_adult-prep.data'.format(k)
+        abs_data_path, initial_rules_path = 'dataset/adult-prep.data', 'adult-prep-rules-picked.data'
+        oka_abs_output_path = 'output/out_oka_k_{}_adult-prep.data'.format(k)
         log_to_file = False
     
     if log_to_file:

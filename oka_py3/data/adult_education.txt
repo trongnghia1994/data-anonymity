@@ -1,0 +1,16 @@
+Bachelors;*
+Some-college;*
+Masters;*
+Assoc-acdm;*
+1st-4th;*
+5th-6th;*
+7th-8th;*
+9th;*
+10th;*
+11th;*
+12th;*
+HS-grad;*
+Doctorate;*
+Assoc-voc;*
+Prof-school;*
+Preschool;*
