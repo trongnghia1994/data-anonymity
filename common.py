@@ -252,8 +252,8 @@ def metrics_cavg_raw(groups: list, k=DESIRED_K):
         total_size += len(group)
         if len(group) < k:
             no_unsafe_groups += 1
-            print('UNSAFE GROUP')
-            print(group)
+            # print('UNSAFE GROUP')
+            # print(group)
     return (total_size / len(groups)) / k, total_size, no_unsafe_groups
 
 

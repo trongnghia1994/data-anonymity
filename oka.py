@@ -12,7 +12,7 @@ if __name__ == '__main__':
         log_to_file = True
     else:
         k = 10
-        abs_data_path, initial_rules_path = 'dataset/adult-prep.data', 'adult-prep-rules-picked.data'
+        abs_data_path, initial_rules_path = 'dataset/adult-min-100-prep.data', 'adult-min-100-prep-rules-picked.data'
         oka_abs_output_path = 'output/out_oka_k_{}_adult-prep.data'.format(k)
         log_to_file = False
     
@@ -27,10 +27,9 @@ if __name__ == '__main__':
         print('K=', k)
         start_time = time.time()
 
-        output_file_name = 'out_oka_k_' + str(k) + '_' + abs_data_path.split('/')[-1].split('.')[0] + '.data'
-        run_oka_with_adult_ds(abs_data_path, k, output_file_name, log_to_file)
+        run_oka_with_adult_ds(abs_data_path, k, oka_abs_output_path, log_to_file)
 
-        dataset = pandas.read_csv(oka_abs_output_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
+        dataset = pandas.read_csv(abs_data_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
         GROUPS = dataset.groupby(QUASI_ATTRIBUTES)
         total_time = time.time() - start_time
 
