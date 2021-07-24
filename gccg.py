@@ -327,8 +327,8 @@ if __name__ == '__main__':
         log_to_file = True
     else:
         k = 10
-        abs_data_path, initial_rules_path = 'D:/data_anonymity/dataset/adult-prep.data', 'adult-prep-rules-picked.data'
-        gccg_output_path = 'D:/data_anonymity/output/out_gccg_k_{}_adult-prep.data'.format(k)
+        abs_data_path, initial_rules_path = 'dataset/adult-min-100-prep.data', 'adult-min-100-prep-rules-picked.data'
+        gccg_output_path = 'output/out_gccg_k_{}_adult-prep.data'.format(k)
         log_to_file = False
     
     if log_to_file:
@@ -343,7 +343,7 @@ if __name__ == '__main__':
         start_time = time.time()
 
         # output_file_name = 'out_gccg_k_' + str(k) + '_' + abs_data_path.split('/')[-1].split('.')[0] + '.data'
-        gccg_output_path = 'D:/data_anonymity/output/out_gccg_k_{}_adult-prep.data'.format(k)
+        gccg_output_path = 'output/out_gccg_k_{}_adult-prep.data'.format(k)
         dataset = pandas.read_csv(abs_data_path, names=RETAINED_DATA_COLUMNS, index_col=False, skipinitialspace=True)
         gccg(dataset, k, gccg_output_path)
         total_time = time.time() - start_time
